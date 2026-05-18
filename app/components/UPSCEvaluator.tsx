@@ -133,7 +133,7 @@ export default function UPSCEvaluator() {
     { icon: "✅", text: "Generating improvement suggestions..." },
   ];
 
-  const handleFile = (f) => {
+  const handleFile = (f: File | null | undefined) => {
     if (f && f.type === "application/pdf") setFile(f);
   };
 
