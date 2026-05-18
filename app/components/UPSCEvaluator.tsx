@@ -177,7 +177,7 @@ export default function UPSCEvaluator() {
       setLoading(false);
       alert("Error: " + error.message);
     }
-  };};
+  };
 
   const reset = () => { setFile(null); setResults(null); setActiveAnswer(0); setActiveTab("scores"); };
 
