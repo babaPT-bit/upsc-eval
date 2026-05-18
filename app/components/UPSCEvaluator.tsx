@@ -115,7 +115,7 @@ function ScoreBar({ score, max, label, comment, delay = 0 }: { score: number; ma
 }
 
 export default function UPSCEvaluator() {
-  const [file, setFile] = useState(null);
+  const [file, setFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
