@@ -113,6 +113,16 @@ function IconArrowUp() {
   );
 }
 
+function IconBulb() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="9" y1="18" x2="15" y2="18" />
+      <line x1="10" y1="22" x2="14" y2="22" />
+      <path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14" />
+    </svg>
+  );
+}
+
 function Spinner() {
   return (
     <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
@@ -126,6 +136,22 @@ function Spinner() {
     </svg>
   );
 }
+
+/* ── UPSC Tips ──────────────────────────────────────────────────────────── */
+const TIPS = [
+  { category: "Depth over Breadth", text: "Focus on causal linkages and systemic roots rather than listing disconnected surface-level points. Incorporate second-order effects and macro-consequences." },
+  { category: "Economy of Words", text: "Eliminate rhetorical filler. Use condensed technical terms like 'fiscal profligacy' instead of 'spending too much public money'. Every word must earn its place." },
+  { category: "Balanced Analysis", text: "When facing conflicting socio-economic goals, acknowledge both structural realities objectively. Conclude using a constructive, constitutional framework." },
+  { category: "Structural Flow", text: "Follow the 10-70-20 rule: 10% contextual introduction, 70% core multi-part body responding to directives, 20% forward-looking conclusion." },
+  { category: "Fact-Grounded Claims", text: "Anchor every argument using Supreme Court judgments, specific constitutional articles, or government committee reports. Never leave claims unsubstantiated." },
+  { category: "Directive: Critically Analyze", text: "Structure as: Arguments For (3-4 points) + Arguments Against (3-4 points) + Systemic structural root cause + Forward-looking Way Forward." },
+  { category: "Directive: Discuss", text: "Use the PERSPECT matrix: map Political, Economic, Religious, Scientific, Philosophical, Environmental, and Legal dimensions with institutional proof." },
+  { category: "Directive: Examine", text: "Probe the 'why' and 'how', not just the 'what'. Present structural background, identify macro-drivers, outline current status, highlight bottlenecks." },
+  { category: "Directive: Comment", text: "Express an evidence-backed position. Acknowledge the premise, support or refute with data and case law, then deliver an unambiguous professional conclusion." },
+  { category: "Hub-and-Spoke Model", text: "Use a central concept connected to 5-6 thematic spokes with high-density data. Saves time and word count while delivering intense factual presentation." },
+  { category: "Visual Efficiency", text: "Use explicit subheadings that mirror the prompt's structural components. Maintain clear transitions with bulleted core matrices for examiner readability." },
+  { category: "Ethics Case Studies", text: "Use the Core-Periphery model: isolate the primary moral dilemma at the center, then map systemic ripple effects across distinct stakeholders." },
+];
 
 /* ── Mock data ──────────────────────────────────────────────────────────── */
 const MOCK_RESULTS = {
@@ -285,7 +311,21 @@ export default function UPSCEvaluator() {
   const [activeAnswer, setActiveAnswer] = useState(0);
   const [activeTab, setActiveTab] = useState("scores");
   const [darkMode, setDarkMode] = useState(false);
+  const [tipIdx, setTipIdx] = useState(0);
+  const [tipFade, setTipFade] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!loading) return;
+    const cycle = setInterval(() => {
+      setTipFade(false);
+      setTimeout(() => {
+        setTipIdx((i) => (i + 1) % TIPS.length);
+        setTipFade(true);
+      }, 300);
+    }, 5000);
+    return () => clearInterval(cycle);
+  }, [loading]);
 
   const loadingSteps = [
     "Extracting text from PDF",
@@ -523,7 +563,7 @@ export default function UPSCEvaluator() {
               }} />
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
               {loadingSteps.map((step, i) => {
                 const done = i < loadingStep;
                 const active = i === loadingStep;
@@ -550,6 +590,49 @@ export default function UPSCEvaluator() {
                   </div>
                 );
               })}
+            </div>
+
+            {/* Rotating tips card */}
+            <div style={{
+              border: "1px solid var(--border)", borderRadius: 8,
+              background: "var(--surface-raised)", padding: "16px 18px",
+            }}>
+              <div style={{
+                opacity: tipFade ? 1 : 0,
+                transition: "opacity 0.3s ease",
+              }}>
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 6,
+                  marginBottom: 8,
+                }}>
+                  <span style={{ color: "var(--accent)", display: "flex", alignItems: "center" }}>
+                    <IconBulb />
+                  </span>
+                  <span style={{
+                    fontSize: 11, fontWeight: 600, color: "var(--accent)",
+                    textTransform: "uppercase", letterSpacing: "0.06em",
+                  }}>
+                    {TIPS[tipIdx].category}
+                  </span>
+                </div>
+                <p style={{
+                  fontSize: 13, color: "var(--fg-secondary)",
+                  lineHeight: 1.6, marginBottom: 14,
+                }}>
+                  {TIPS[tipIdx].text}
+                </p>
+              </div>
+              {/* Dot indicators */}
+              <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
+                {TIPS.map((_, i) => (
+                  <div key={i} style={{
+                    height: 4, borderRadius: 2,
+                    width: i === tipIdx ? 16 : 4,
+                    background: i === tipIdx ? "var(--accent)" : "var(--border)",
+                    transition: "width 0.3s ease, background 0.3s ease",
+                  }} />
+                ))}
+              </div>
             </div>
           </div>
         )}
