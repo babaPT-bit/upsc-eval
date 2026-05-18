@@ -1,5 +1,133 @@
+"use client";
 import { useState, useRef, useEffect } from "react";
+import type { CSSProperties } from "react";
 
+const API_URL = "https://PranshuT-upsc-answer-evaluator.hf.space/evaluate";
+
+/* ── Icons ──────────────────────────────────────────────────────────────── */
+function IconUploadCloud() {
+  return (
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="16 16 12 12 8 16" />
+      <line x1="12" y1="12" x2="12" y2="21" />
+      <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
+    </svg>
+  );
+}
+
+function IconFile() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
+      <polyline points="13 2 13 9 20 9" />
+    </svg>
+  );
+}
+
+function IconCheck({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
+function IconX({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  );
+}
+
+function IconSun() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="5" />
+      <line x1="12" y1="1" x2="12" y2="3" />
+      <line x1="12" y1="21" x2="12" y2="23" />
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+      <line x1="1" y1="12" x2="3" y2="12" />
+      <line x1="21" y1="12" x2="23" y2="12" />
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+    </svg>
+  );
+}
+
+function IconMoon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+    </svg>
+  );
+}
+
+function IconScan() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 7V5a2 2 0 0 1 2-2h2" />
+      <path d="M17 3h2a2 2 0 0 1 2 2v2" />
+      <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
+      <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
+      <rect x="7" y="7" width="10" height="10" rx="1" />
+    </svg>
+  );
+}
+
+function IconCpu() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="4" y="4" width="16" height="16" rx="2" />
+      <rect x="9" y="9" width="6" height="6" />
+      <line x1="9" y1="1" x2="9" y2="4" />
+      <line x1="15" y1="1" x2="15" y2="4" />
+      <line x1="9" y1="20" x2="9" y2="23" />
+      <line x1="15" y1="20" x2="15" y2="23" />
+      <line x1="20" y1="9" x2="23" y2="9" />
+      <line x1="20" y1="14" x2="23" y2="14" />
+      <line x1="1" y1="9" x2="4" y2="9" />
+      <line x1="1" y1="14" x2="4" y2="14" />
+    </svg>
+  );
+}
+
+function IconAlertTriangle() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+      <line x1="12" y1="9" x2="12" y2="13" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+  );
+}
+
+function IconArrowUp() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="19" x2="12" y2="5" />
+      <polyline points="5 12 12 5 19 12" />
+    </svg>
+  );
+}
+
+function Spinner() {
+  return (
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+      <circle cx="16" cy="16" r="13" stroke="var(--border)" strokeWidth="3" />
+      <circle
+        cx="16" cy="16" r="13"
+        stroke="var(--accent)" strokeWidth="3"
+        strokeDasharray="20 61.73" strokeLinecap="round"
+        style={{ animation: "notionSpin 1.4s linear infinite", transformOrigin: "center" }}
+      />
+    </svg>
+  );
+}
+
+/* ── Mock data ──────────────────────────────────────────────────────────── */
 const MOCK_RESULTS = {
   answers: [
     {
@@ -22,8 +150,8 @@ const MOCK_RESULTS = {
         "Add 2-3 landmark cases: Maneka Gandhi v. Union of India (1978), Vishaka v. State of Rajasthan (1997), K.S. Puttaswamy v. Union of India (2017)",
         "Include a diagram showing the hierarchy of judicial protection mechanisms",
         "Discuss challenges: judicial overreach, pendency of cases, appointment controversies (NJAC case)",
-        "Add comparative perspective: Mention how Indian judicial review differs from the UK (parliamentary sovereignty) and USA (due process clause)",
-        "Use the UPSC-preferred format: start with a definition/context, move to multidimensional analysis, end with a balanced conclusion",
+        "Add comparative perspective: how Indian judicial review differs from the UK (parliamentary sovereignty) and USA (due process clause)",
+        "Use the UPSC-preferred format: definition/context → multidimensional analysis → balanced conclusion",
       ],
     },
     {
@@ -54,71 +182,99 @@ const MOCK_RESULTS = {
     totalScore: 13.7,
     totalMax: 20,
     percentage: 68.5,
-    strengths: ["Good constitutional knowledge", "Decent introductions", "Logical flow of arguments"],
-    weaknesses: ["Missing landmark cases and recent developments", "Insufficient UPSC-specific vocabulary", "Needs more multidimensional analysis"],
+    strengths: ["Good constitutional knowledge", "Decent introductions", "Logical flow"],
+    weaknesses: ["Missing landmark cases", "Insufficient UPSC vocabulary", "Needs multidimensional analysis"],
     topRecommendation: "Focus on the PEEL method (Point → Evidence → Explanation → Link) for each paragraph. Add 2-3 specific examples per answer.",
   },
 };
 
-// Animated counter
-function AnimatedScore({ value, max, duration = 1200 }: { value: number; max: number; duration?: number }) {
-  const [display, setDisplay] = useState(0);
-  useEffect(() => {
-    let start = 0;
-    const step = value / (duration / 16);
-    const timer = setInterval(() => {
-      start += step;
-      if (start >= value) { setDisplay(value); clearInterval(timer); }
-      else setDisplay(Math.round(start * 10) / 10);
-    }, 16);
-    return () => clearInterval(timer);
-  }, [value, duration]);
-  return <span>{display.toFixed(1)}<span style={{ opacity: 0.4, fontSize: "0.6em" }}>/{max}</span></span>;
+/* ── Types ──────────────────────────────────────────────────────────────── */
+interface Dimension { name: string; score: number; max: number; comment: string; }
+interface FactualError { text: string; correction: string; }
+interface Answer {
+  question: string; extractedText: string;
+  overallScore: number; maxScore: number;
+  dimensions: Dimension[]; factualErrors: FactualError[]; improvements: string[];
+}
+interface Results {
+  answers: Answer[];
+  summary: { totalScore: number; totalMax: number; percentage: number; strengths: string[]; weaknesses: string[]; topRecommendation: string; };
 }
 
-// Score ring
-function ScoreRing({ score, max, size = 120, strokeWidth = 8 }: { score: number; max: number; size?: number; strokeWidth?: number }) {
-  const pct = (score / max) * 100;
-  const r = (size - strokeWidth) / 2;
+/* ── Score Ring ─────────────────────────────────────────────────────────── */
+function ScoreRing({ score, max, size = 100 }: { score: number; max: number; size?: number }) {
+  const [animated, setAnimated] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setAnimated(true), 60); return () => clearTimeout(t); }, []);
+
+  const sw = 5;
+  const r = (size - sw * 2) / 2;
   const circ = 2 * Math.PI * r;
-  const offset = circ - (pct / 100) * circ;
-  const color = pct >= 75 ? "#22c55e" : pct >= 50 ? "#f59e0b" : "#ef4444";
-
-  return (
-    <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--border-subtle)" strokeWidth={strokeWidth} />
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={strokeWidth}
-        strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
-        style={{ transition: "stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1)" }} />
-    </svg>
-  );
-}
-
-function ScoreBar({ score, max, label, comment, delay = 0 }: { score: number; max: number; label: string; comment: string; delay?: number }) {
   const pct = (score / max) * 100;
-  const color = pct >= 75 ? "#22c55e" : pct >= 50 ? "#f59e0b" : "#ef4444";
-  const [visible, setVisible] = useState(false);
-  useEffect(() => { const t = setTimeout(() => setVisible(true), delay); return () => clearTimeout(t); }, [delay]);
+  const offset = animated ? circ - (pct / 100) * circ : circ;
+  const color = pct >= 75 ? "var(--green)" : pct >= 50 ? "var(--orange)" : "var(--red)";
 
   return (
-    <div style={{ marginBottom: 18, opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(10px)", transition: "all 0.5s ease" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", fontFamily: "var(--font-body)" }}>{label}</span>
-        <span style={{ fontSize: 13, fontWeight: 700, color, fontFamily: "var(--font-mono)" }}>{score}/{max}</span>
+    <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
+      <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--border)" strokeWidth={sw} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={sw}
+          strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
+          style={{ transition: "stroke-dashoffset 1s ease" }} />
+      </svg>
+      <div style={{
+        position: "absolute", inset: 0,
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+      }}>
+        <span style={{
+          fontFamily: "'Noto Serif', Georgia, serif",
+          fontWeight: 700, fontSize: size * 0.19, color, lineHeight: 1,
+        }}>
+          {Math.round(pct)}%
+        </span>
+        <span style={{
+          fontFamily: "'JetBrains Mono', Menlo, monospace",
+          fontSize: size * 0.1, color: "var(--dim)", marginTop: 2,
+        }}>
+          {score}/{max}
+        </span>
       </div>
-      <div style={{ height: 6, borderRadius: 3, background: "var(--border-subtle)", overflow: "hidden" }}>
-        <div style={{ height: "100%", width: visible ? `${pct}%` : "0%", background: color, borderRadius: 3, transition: "width 1s cubic-bezier(0.4,0,0.2,1)" }} />
-      </div>
-      <p style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 4, lineHeight: 1.5, fontFamily: "var(--font-body)" }}>{comment}</p>
     </div>
   );
 }
 
-interface Dimension { name: string; score: number; max: number; comment: string; }
-interface FactualError { text: string; correction: string; }
-interface Answer { question: string; extractedText: string; overallScore: number; maxScore: number; dimensions: Dimension[]; factualErrors: FactualError[]; improvements: string[]; }
-interface Results { answers: Answer[]; summary: { totalScore: number; totalMax: number; percentage: number; strengths: string[]; weaknesses: string[]; topRecommendation: string; }; }
+/* ── Score Bar ──────────────────────────────────────────────────────────── */
+function ScoreBar({ label, score, max, comment, delay = 0 }: {
+  label: string; score: number; max: number; comment: string; delay?: number;
+}) {
+  const [animated, setAnimated] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setAnimated(true), delay); return () => clearTimeout(t); }, [delay]);
 
+  const pct = (score / max) * 100;
+  const color = pct >= 75 ? "var(--green)" : pct >= 50 ? "var(--orange)" : "var(--red)";
+
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+        <span style={{ fontSize: 13, fontWeight: 500, color: "var(--fg)" }}>{label}</span>
+        <span style={{ fontFamily: "'JetBrains Mono', Menlo, monospace", fontSize: 12, color, fontWeight: 500 }}>
+          {score}/{max}
+        </span>
+      </div>
+      <div style={{ height: 5, borderRadius: 3, background: "var(--border)", overflow: "hidden" }}>
+        <div style={{
+          height: "100%", borderRadius: 3, background: color,
+          width: animated ? `${pct}%` : "0%",
+          transition: "width 0.7s ease",
+        }} />
+      </div>
+      {comment && (
+        <p style={{ marginTop: 5, fontSize: 12, color: "var(--dim)", lineHeight: 1.5 }}>{comment}</p>
+      )}
+    </div>
+  );
+}
+
+/* ── Main Component ─────────────────────────────────────────────────────── */
 export default function UPSCEvaluator() {
   const [file, setFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -128,14 +284,14 @@ export default function UPSCEvaluator() {
   const [results, setResults] = useState<Results | null>(null);
   const [activeAnswer, setActiveAnswer] = useState(0);
   const [activeTab, setActiveTab] = useState("scores");
-  const [darkMode, setDarkMode] = useState(true);
+  const [darkMode, setDarkMode] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const loadingSteps = [
-    { icon: "📄", text: "Extracting text from PDF..." },
-    { icon: "🔍", text: "Identifying question-answer blocks..." },
-    { icon: "🧠", text: "Evaluating against UPSC standards..." },
-    { icon: "✅", text: "Generating improvement suggestions..." },
+    "Extracting text from PDF",
+    "Identifying question-answer blocks",
+    "Evaluating against UPSC standards",
+    "Generating improvement suggestions",
   ];
 
   const handleFile = (f: File | null | undefined) => {
@@ -147,7 +303,7 @@ export default function UPSCEvaluator() {
     setLoading(true);
     setProgress(0);
     setLoadingStep(0);
-  
+
     let p = 0;
     const interval = setInterval(() => {
       p += Math.random() * 3 + 1;
@@ -155,29 +311,19 @@ export default function UPSCEvaluator() {
       setProgress(p);
       setLoadingStep(Math.min(Math.floor(p / 25), 3));
     }, 300);
-  
+
     try {
       const formData = new FormData();
       formData.append("file", file);
-  
-      const response = await fetch(
-        "https://PranshuT-upsc-answer-evaluator.hf.space/evaluate",
-        { method: "POST", body: formData }
-      );
-  
+      const response = await fetch(API_URL, { method: "POST", body: formData });
       if (!response.ok) {
         const err = await response.json();
         throw new Error(err.detail || "Evaluation failed");
       }
-  
       const data = await response.json();
       clearInterval(interval);
       setProgress(100);
-      setTimeout(() => {
-        setLoading(false);
-        setResults(data);
-      }, 500);
-  
+      setTimeout(() => { setLoading(false); setResults(data); }, 500);
     } catch (error) {
       clearInterval(interval);
       setLoading(false);
@@ -187,304 +333,395 @@ export default function UPSCEvaluator() {
 
   const reset = () => { setFile(null); setResults(null); setActiveAnswer(0); setActiveTab("scores"); };
 
-  const theme = darkMode ? {
-    "--bg-primary": "#0a0a0f",
-    "--bg-secondary": "#12121a",
-    "--bg-card": "#1a1a26",
-    "--bg-card-hover": "#22222f",
-    "--bg-elevated": "#252533",
-    "--text-primary": "#f0f0f5",
-    "--text-secondary": "#8888a0",
-    "--text-tertiary": "#55556a",
-    "--accent": "#6366f1",
-    "--accent-glow": "rgba(99,102,241,0.15)",
-    "--accent-secondary": "#818cf8",
-    "--border": "rgba(255,255,255,0.06)",
-    "--border-subtle": "rgba(255,255,255,0.04)",
-    "--error": "#f87171",
-    "--error-bg": "rgba(248,113,113,0.08)",
-    "--success": "#34d399",
-    "--success-bg": "rgba(52,211,153,0.08)",
-    "--warning": "#fbbf24",
-    "--warning-bg": "rgba(251,191,36,0.08)",
-    "--shadow": "0 8px 32px rgba(0,0,0,0.4)",
-    "--font-display": "'Outfit', sans-serif",
-    "--font-body": "'DM Sans', sans-serif",
-    "--font-mono": "'JetBrains Mono', monospace",
-  } : {
-    "--bg-primary": "#f5f5f0",
-    "--bg-secondary": "#eeeee8",
-    "--bg-card": "#ffffff",
-    "--bg-card-hover": "#fafaf7",
-    "--bg-elevated": "#f0f0eb",
-    "--text-primary": "#1a1a2e",
-    "--text-secondary": "#6b7280",
-    "--text-tertiary": "#9ca3af",
-    "--accent": "#4f46e5",
-    "--accent-glow": "rgba(79,70,229,0.08)",
-    "--accent-secondary": "#6366f1",
-    "--border": "rgba(0,0,0,0.08)",
-    "--border-subtle": "rgba(0,0,0,0.04)",
-    "--error": "#dc2626",
-    "--error-bg": "rgba(220,38,38,0.06)",
-    "--success": "#16a34a",
-    "--success-bg": "rgba(22,163,74,0.06)",
-    "--warning": "#d97706",
-    "--warning-bg": "rgba(217,119,6,0.06)",
-    "--shadow": "0 8px 32px rgba(0,0,0,0.08)",
-    "--font-display": "'Outfit', sans-serif",
-    "--font-body": "'DM Sans', sans-serif",
-    "--font-mono": "'JetBrains Mono', monospace",
+  const lightVars: Record<string, string> = {
+    "--bg": "#FFFFFF", "--surface": "#FFFFFF", "--surface-raised": "#F1F1EF",
+    "--fg": "#373530", "--fg-secondary": "#787774", "--dim": "#9B9A97",
+    "--border": "#E9E9E7", "--border-hover": "#D8D8D6",
+    "--green": "#548164", "--green-bg": "#EEF3ED", "--green-fg": "#548164",
+    "--orange": "#CC782F", "--orange-bg": "#F8ECDF",
+    "--red": "#C4554D", "--red-bg": "#FAECEC", "--red-fg": "#C4554D",
+    "--blue": "#487CA5", "--blue-bg": "#E9F3F7",
+    "--accent": "#487CA5", "--accent-bg": "#E9F3F7",
   };
 
+  const darkVars: Record<string, string> = {
+    "--bg": "#191919", "--surface": "#202020", "--surface-raised": "#2a2a2a",
+    "--fg": "#D4D4D4", "--fg-secondary": "#9B9B9B", "--dim": "#6b6b6b",
+    "--border": "#333333", "--border-hover": "#444444",
+    "--green": "#4F9768", "--green-bg": "#242B26", "--green-fg": "#4F9768",
+    "--orange": "#CB7B37", "--orange-bg": "#36291F",
+    "--red": "#BE524B", "--red-bg": "#332523", "--red-fg": "#BE524B",
+    "--blue": "#447ACB", "--blue-bg": "#1F282D",
+    "--accent": "#447ACB", "--accent-bg": "#1F282D",
+  };
+
+  const theme = darkMode ? darkVars : lightVars;
   const answer = results?.answers[activeAnswer];
 
+  const FEATURES = [
+    { icon: <IconScan />, title: "OCR Extraction", desc: "Handwritten and typed PDF support with high-accuracy text extraction" },
+    { icon: <IconCpu />, title: "AI Evaluation", desc: "Scored across 5 UPSC dimensions: introduction, content, structure, keywords, and conclusion" },
+    { icon: <IconAlertTriangle />, title: "Error Detection", desc: "Identifies factual inaccuracies and provides accurate corrections" },
+    { icon: <IconArrowUp />, title: "Improvements", desc: "Actionable, UPSC-specific suggestions to maximise your score" },
+  ];
+
   return (
-    <div style={{ ...theme, background: "var(--bg-primary)", minHeight: "100vh", color: "var(--text-primary)", fontFamily: "var(--font-body)" }}>
+    <div style={{ ...(theme as unknown as CSSProperties), background: "var(--bg)", color: "var(--fg)", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif", minHeight: "100vh", fontSize: 14 }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap');
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
-        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-6px); } }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .glass-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); backdrop-filter: blur(20px); }
-        .hover-lift { transition: all 0.3s cubic-bezier(0.4,0,0.2,1); }
-        .hover-lift:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0,0,0,0.15); }
-        .tag { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; font-family: var(--font-mono); letter-spacing: 0.02em; }
-        .tab-btn { padding: 8px 16px; border: none; background: transparent; color: var(--text-secondary); font-family: var(--font-body); font-size: 13px; font-weight: 600; cursor: pointer; border-radius: 8px; transition: all 0.2s; }
-        .tab-btn.active { background: var(--accent); color: white; }
-        .tab-btn:hover:not(.active) { background: var(--bg-elevated); color: var(--text-primary); }
-        ::selection { background: var(--accent); color: white; }
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        @keyframes notionSpin { to { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        button { cursor: pointer; font-family: inherit; }
       `}</style>
 
-      {/* Ambient background */}
-      <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, overflow: "hidden", pointerEvents: "none", zIndex: 0 }}>
-        <div style={{ position: "absolute", top: "-20%", right: "-10%", width: 600, height: 600, borderRadius: "50%", background: "radial-gradient(circle, var(--accent-glow), transparent 70%)", filter: "blur(80px)" }} />
-        <div style={{ position: "absolute", bottom: "-20%", left: "-10%", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(236,72,153,0.06), transparent 70%)", filter: "blur(80px)" }} />
-      </div>
+      {/* ── Header ── */}
+      <header style={{
+        borderBottom: "1px solid var(--border)",
+        padding: "0 24px", height: 48,
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        position: "sticky", top: 0, background: "var(--bg)", zIndex: 10,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{
+            width: 28, height: 28, borderRadius: 6,
+            border: "1px solid var(--border)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontFamily: "'Noto Serif', Georgia, serif", fontWeight: 700, fontSize: 13,
+            color: "var(--fg)",
+          }}>U</div>
+          <span style={{ fontWeight: 500, fontSize: 14, color: "var(--fg)" }}>UPSC Evaluator</span>
+        </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {results && (
+            <button onClick={reset} style={{
+              padding: "5px 12px", borderRadius: 6,
+              border: "1px solid var(--border)", background: "transparent",
+              color: "var(--fg-secondary)", fontSize: 13, fontWeight: 500,
+              transition: "border-color 0.15s ease",
+            }}
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--border-hover)")}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+            >New upload</button>
+          )}
+          <button onClick={() => setDarkMode(!darkMode)} style={{
+            width: 32, height: 32, borderRadius: 6,
+            border: "1px solid var(--border)", background: "transparent",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            color: "var(--fg-secondary)", transition: "border-color 0.15s ease",
+          }}
+            onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--border-hover)")}
+            onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+          >
+            {darkMode ? <IconSun /> : <IconMoon />}
+          </button>
+        </div>
+      </header>
 
-      <div style={{ position: "relative", zIndex: 1, maxWidth: 1100, margin: "0 auto", padding: "20px 20px 60px" }}>
+      {/* ── Main content ── */}
+      <main style={{ maxWidth: 720, margin: "0 auto", padding: "0 24px" }}>
 
-        {/* Header */}
-        <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 0 32px", animation: "fadeUp 0.6s ease" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 10, background: "linear-gradient(135deg, var(--accent), #a78bfa)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>📝</div>
-            <div>
-              <h1 style={{ fontSize: 20, fontWeight: 800, fontFamily: "var(--font-display)", letterSpacing: "-0.02em" }}>
-                UPSC<span style={{ color: "var(--accent)" }}>Eval</span>
-              </h1>
-              <p style={{ fontSize: 11, color: "var(--text-tertiary)", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase" }}>Mains Answer Evaluator</p>
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            {results && (
-              <button onClick={reset} style={{ padding: "8px 16px", border: "1px solid var(--border)", background: "var(--bg-card)", color: "var(--text-primary)", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "var(--font-body)" }}>
-                ← New Upload
-              </button>
-            )}
-            <button onClick={() => setDarkMode(!darkMode)} style={{ width: 38, height: 38, borderRadius: 10, border: "1px solid var(--border)", background: "var(--bg-card)", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              {darkMode ? "☀️" : "🌙"}
-            </button>
-          </div>
-        </header>
-
-        {/* Upload State */}
+        {/* Upload screen */}
         {!loading && !results && (
-          <div style={{ animation: "fadeUp 0.8s ease" }}>
-            <div style={{ textAlign: "center", marginBottom: 40 }}>
-              <h2 style={{ fontSize: 36, fontWeight: 800, fontFamily: "var(--font-display)", letterSpacing: "-0.03em", lineHeight: 1.2, marginBottom: 12 }}>
-                Get your Mains answers<br /><span style={{ background: "linear-gradient(135deg, var(--accent), #a78bfa, #ec4899)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>evaluated by AI</span>
-              </h2>
-              <p style={{ fontSize: 16, color: "var(--text-secondary)", maxWidth: 500, margin: "0 auto", lineHeight: 1.6 }}>
-                Upload your handwritten or typed answer sheet. Get detailed scoring, factual error detection, and UPSC-specific improvement tips.
-              </p>
-            </div>
+          <div style={{ animation: "fadeIn 0.2s ease", paddingTop: 48, paddingBottom: 64 }}>
+            <h1 style={{
+              fontFamily: "'Noto Serif', Georgia, serif",
+              fontWeight: 700, fontSize: 28, color: "var(--fg)",
+              marginBottom: 10, lineHeight: 1.3,
+            }}>
+              Evaluate your UPSC Mains answers
+            </h1>
+            <p style={{ color: "var(--fg-secondary)", fontSize: 15, marginBottom: 32, lineHeight: 1.6 }}>
+              Upload your answer sheet PDF and receive AI-powered scoring, factual error detection, and UPSC-specific improvement suggestions.
+            </p>
 
-            <div className="glass-card hover-lift" onClick={() => fileRef.current?.click()}
+            {/* Drop zone */}
+            <div
+              onClick={() => fileRef.current?.click()}
               onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
               onDragLeave={() => setDragActive(false)}
               onDrop={(e) => { e.preventDefault(); setDragActive(false); handleFile(e.dataTransfer.files[0]); }}
-              style={{ padding: 48, textAlign: "center", cursor: "pointer", border: dragActive ? "2px dashed var(--accent)" : "1px solid var(--border)", background: dragActive ? "var(--accent-glow)" : "var(--bg-card)", transition: "all 0.3s ease", maxWidth: 560, margin: "0 auto" }}>
+              style={{
+                border: `1.5px dashed ${dragActive ? "var(--accent)" : "var(--border)"}`,
+                borderRadius: 8,
+                padding: "40px 24px",
+                textAlign: "center",
+                cursor: "pointer",
+                background: dragActive ? "var(--accent-bg)" : "var(--surface-raised)",
+                transition: "border-color 0.15s ease, background 0.15s ease",
+                marginBottom: 16,
+              }}
+            >
               <input ref={fileRef} type="file" accept=".pdf" onChange={(e) => handleFile(e.target.files?.[0])} style={{ display: "none" }} />
-              <div style={{ fontSize: 48, marginBottom: 16, animation: "float 3s ease-in-out infinite" }}>
-                {file ? "📄" : "☁️"}
+              <div style={{ color: file ? "var(--accent)" : "var(--dim)", marginBottom: 10, display: "flex", justifyContent: "center" }}>
+                {file ? <IconFile /> : <IconUploadCloud />}
               </div>
               {file ? (
                 <>
-                  <p style={{ fontSize: 16, fontWeight: 700, fontFamily: "var(--font-display)", marginBottom: 4 }}>{file.name}</p>
-                  <p style={{ fontSize: 13, color: "var(--text-secondary)" }}>{(file.size / 1024 / 1024).toFixed(2)} MB — Ready to evaluate</p>
+                  <p style={{ fontWeight: 500, fontSize: 14, color: "var(--fg)", marginBottom: 4 }}>{file.name}</p>
+                  <p style={{ fontSize: 13, color: "var(--dim)" }}>{(file.size / 1024 / 1024).toFixed(2)} MB — click to change</p>
                 </>
               ) : (
                 <>
-                  <p style={{ fontSize: 16, fontWeight: 600, fontFamily: "var(--font-display)", marginBottom: 4 }}>Drop your answer sheet PDF here</p>
-                  <p style={{ fontSize: 13, color: "var(--text-secondary)" }}>or click to browse · PDF up to 20MB</p>
+                  <p style={{ fontWeight: 500, fontSize: 14, color: "var(--fg)", marginBottom: 4 }}>Drop your PDF here</p>
+                  <p style={{ fontSize: 13, color: "var(--dim)" }}>or click to browse</p>
                 </>
               )}
             </div>
 
             {file && (
-              <div style={{ textAlign: "center", marginTop: 24, animation: "fadeUp 0.4s ease" }}>
-                <button onClick={handleUpload} style={{ padding: "14px 40px", background: "linear-gradient(135deg, var(--accent), #818cf8)", color: "white", border: "none", borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "var(--font-display)", letterSpacing: "0.01em", boxShadow: "0 4px 20px var(--accent-glow)", transition: "transform 0.2s" }}
-                  onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.03)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}>
-                  Evaluate My Answers →
-                </button>
-              </div>
+              <button onClick={handleUpload} style={{
+                width: "100%", padding: "10px", borderRadius: 6, marginBottom: 32,
+                border: "1px solid var(--accent)", background: "var(--accent-bg)",
+                color: "var(--accent)", fontSize: 14, fontWeight: 600,
+                transition: "background 0.15s ease, color 0.15s ease",
+              }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = "var(--accent)"; e.currentTarget.style.color = "var(--bg)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = "var(--accent-bg)"; e.currentTarget.style.color = "var(--accent)"; }}
+              >
+                Evaluate answers
+              </button>
             )}
 
-            {/* Features */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16, marginTop: 48 }}>
-              {[
-                { icon: "🔍", title: "OCR Extraction", desc: "Handwritten & typed PDF support with high-accuracy text extraction" },
-                { icon: "📊", title: "Dimension-wise Scoring", desc: "Introduction, content, structure, keywords & conclusion scored separately" },
-                { icon: "⚠️", title: "Factual Error Detection", desc: "Identifies incorrect facts and provides corrections with sources" },
-                { icon: "🎯", title: "UPSC-Specific Tips", desc: "Keyword suggestions, case studies, diagram ideas & format guidance" },
-              ].map((f, i) => (
-                <div key={i} className="glass-card" style={{ padding: 20, animation: `fadeUp ${0.6 + i * 0.15}s ease` }}>
-                  <div style={{ fontSize: 24, marginBottom: 10 }}>{f.icon}</div>
-                  <h3 style={{ fontSize: 14, fontWeight: 700, fontFamily: "var(--font-display)", marginBottom: 4 }}>{f.title}</h3>
-                  <p style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.5 }}>{f.desc}</p>
+            {/* Feature cards */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              {FEATURES.map((f, i) => (
+                <div key={i} style={{
+                  padding: 16, border: "1px solid var(--border)", borderRadius: 8,
+                  background: "var(--surface)", transition: "border-color 0.15s ease",
+                }}
+                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--border-hover)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+                >
+                  <div style={{ color: "var(--accent)", marginBottom: 10 }}>{f.icon}</div>
+                  <p style={{ fontWeight: 500, fontSize: 13, color: "var(--fg)", marginBottom: 4 }}>{f.title}</p>
+                  <p style={{ fontSize: 12, color: "var(--dim)", lineHeight: 1.5 }}>{f.desc}</p>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* Loading State */}
+        {/* Loading screen */}
         {loading && (
-          <div style={{ maxWidth: 480, margin: "80px auto", textAlign: "center", animation: "fadeUp 0.5s ease" }}>
-            <div style={{ marginBottom: 32 }}>
-              <div style={{ width: 80, height: 80, margin: "0 auto 24px", borderRadius: 20, background: "var(--accent-glow)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36 }}>
-                <span style={{ animation: "spin 2s linear infinite", display: "inline-block" }}>⚙️</span>
-              </div>
-              <h2 style={{ fontSize: 22, fontWeight: 700, fontFamily: "var(--font-display)", marginBottom: 8 }}>Analyzing your answers</h2>
-              <p style={{ color: "var(--text-secondary)", fontSize: 14 }}>{loadingSteps[loadingStep]?.icon} {loadingSteps[loadingStep]?.text}</p>
+          <div style={{ paddingTop: 72, paddingBottom: 64, maxWidth: 440, margin: "0 auto", animation: "fadeIn 0.2s ease" }}>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
+              <Spinner />
             </div>
-            <div style={{ height: 6, borderRadius: 3, background: "var(--border-subtle)", overflow: "hidden", marginBottom: 12 }}>
-              <div style={{ height: "100%", width: `${progress}%`, background: "linear-gradient(90deg, var(--accent), #a78bfa)", borderRadius: 3, transition: "width 0.3s ease" }} />
+            <h2 style={{
+              fontFamily: "'Noto Serif', Georgia, serif",
+              fontWeight: 600, fontSize: 20, textAlign: "center",
+              marginBottom: 24, color: "var(--fg)",
+            }}>
+              Processing your answers
+            </h2>
+
+            <div style={{ height: 3, borderRadius: 2, background: "var(--border)", marginBottom: 32, overflow: "hidden" }}>
+              <div style={{
+                height: "100%", borderRadius: 2, background: "var(--accent)",
+                width: `${progress}%`, transition: "width 0.2s ease",
+              }} />
             </div>
-            <p style={{ fontSize: 12, color: "var(--text-tertiary)", fontFamily: "var(--font-mono)" }}>{Math.round(progress)}%</p>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {loadingSteps.map((step, i) => {
+                const done = i < loadingStep;
+                const active = i === loadingStep;
+                return (
+                  <div key={i} style={{
+                    display: "flex", alignItems: "center", gap: 12,
+                    opacity: done || active ? 1 : 0.35,
+                    transition: "opacity 0.3s ease",
+                  }}>
+                    <div style={{
+                      width: 22, height: 22, borderRadius: "50%", flexShrink: 0,
+                      border: `1px solid ${done ? "var(--green)" : active ? "var(--accent)" : "var(--border)"}`,
+                      background: done ? "var(--green-bg)" : active ? "var(--accent-bg)" : "transparent",
+                      color: done ? "var(--green)" : active ? "var(--accent)" : "var(--dim)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 500,
+                    }}>
+                      {done ? <IconCheck size={11} /> : i + 1}
+                    </div>
+                    <span style={{
+                      fontSize: 13, fontWeight: active ? 500 : 400,
+                      color: active ? "var(--fg)" : "var(--fg-secondary)",
+                    }}>{step}</span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 
-        {/* Results State */}
-        {results && (
-          <div style={{ animation: "fadeUp 0.6s ease" }}>
-            {/* Summary Banner */}
-            <div className="glass-card" style={{ padding: 28, marginBottom: 24, display: "flex", flexWrap: "wrap", gap: 24, alignItems: "center" }}>
-              <div style={{ position: "relative", width: 120, height: 120, flexShrink: 0 }}>
-                <ScoreRing score={results.summary.totalScore} max={results.summary.totalMax} />
-                <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                  <span style={{ fontSize: 28, fontWeight: 800, fontFamily: "var(--font-display)" }}>
-                    <AnimatedScore value={results.summary.percentage} max={100} />
-                  </span>
-                  <span style={{ fontSize: 10, color: "var(--text-tertiary)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>Overall</span>
-                </div>
-              </div>
-              <div style={{ flex: 1, minWidth: 200 }}>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-                  {results.summary.strengths.slice(0, 2).map((s, i) => (
-                    <span key={i} className="tag" style={{ background: "var(--success-bg)", color: "var(--success)" }}>✓ {s}</span>
-                  ))}
-                  {results.summary.weaknesses.slice(0, 2).map((w, i) => (
-                    <span key={i} className="tag" style={{ background: "var(--error-bg)", color: "var(--error)" }}>✗ {w}</span>
-                  ))}
-                </div>
-                <div style={{ padding: 12, background: "var(--accent-glow)", borderRadius: 10, borderLeft: "3px solid var(--accent)" }}>
-                  <p style={{ fontSize: 12, fontWeight: 600, color: "var(--accent-secondary)", marginBottom: 2, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.05em" }}>Top Recommendation</p>
-                  <p style={{ fontSize: 13, color: "var(--text-primary)", lineHeight: 1.5 }}>{results.summary.topRecommendation}</p>
-                </div>
-              </div>
-            </div>
+        {/* Results screen */}
+        {results && !loading && (
+          <div style={{ paddingTop: 32, paddingBottom: 64, animation: "fadeIn 0.2s ease" }}>
 
-            {/* Answer Selector */}
-            <div style={{ display: "flex", gap: 10, marginBottom: 20, overflowX: "auto", paddingBottom: 4 }}>
-              {results.answers.map((a, i) => (
-                <button key={i} onClick={() => { setActiveAnswer(i); setActiveTab("scores"); }}
-                  className="hover-lift"
-                  style={{ flex: "0 0 auto", padding: "12px 18px", borderRadius: 12, border: activeAnswer === i ? "2px solid var(--accent)" : "1px solid var(--border)", background: activeAnswer === i ? "var(--accent-glow)" : "var(--bg-card)", cursor: "pointer", textAlign: "left", minWidth: 180 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                    <span style={{ fontSize: 11, fontFamily: "var(--font-mono)", fontWeight: 600, color: "var(--text-tertiary)" }}>Q{i + 1}</span>
-                    <span style={{ fontSize: 18, fontWeight: 800, fontFamily: "var(--font-display)", color: a.overallScore >= 7 ? "var(--success)" : a.overallScore >= 5 ? "var(--warning)" : "var(--error)" }}>
-                      {a.overallScore}/{a.maxScore}
-                    </span>
-                  </div>
-                  <p style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.4, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                    {a.question}
+            {/* Summary card */}
+            <div style={{
+              border: "1px solid var(--border)", borderRadius: 8,
+              background: "var(--surface)", padding: 24, marginBottom: 20,
+            }}>
+              <div style={{ display: "flex", gap: 24, alignItems: "flex-start", flexWrap: "wrap" }}>
+                <ScoreRing score={results.summary.totalScore} max={results.summary.totalMax} size={100} />
+                <div style={{ flex: 1, minWidth: 200 }}>
+                  <h2 style={{
+                    fontFamily: "'Noto Serif', Georgia, serif",
+                    fontWeight: 600, fontSize: 18, color: "var(--fg)", marginBottom: 4,
+                  }}>Overall Performance</h2>
+                  <p style={{
+                    fontFamily: "'JetBrains Mono', Menlo, monospace",
+                    fontSize: 12, color: "var(--dim)", marginBottom: 14,
+                  }}>
+                    {results.summary.totalScore}/{results.summary.totalMax} · {results.summary.percentage.toFixed(1)}%
                   </p>
-                </button>
-              ))}
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
+                    {results.summary.strengths.map((s, i) => (
+                      <span key={i} style={{
+                        padding: "3px 8px", borderRadius: 4, fontSize: 12,
+                        background: "var(--green-bg)", color: "var(--green)", fontWeight: 500,
+                      }}>{s}</span>
+                    ))}
+                    {results.summary.weaknesses.map((w, i) => (
+                      <span key={i} style={{
+                        padding: "3px 8px", borderRadius: 4, fontSize: 12,
+                        background: "var(--red-bg)", color: "var(--red)", fontWeight: 500,
+                      }}>{w}</span>
+                    ))}
+                  </div>
+                  <div style={{
+                    padding: "10px 14px", borderRadius: 6,
+                    background: "var(--accent-bg)", borderLeft: "3px solid var(--accent)",
+                  }}>
+                    <p style={{
+                      fontSize: 11, fontWeight: 600, color: "var(--accent)",
+                      textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4,
+                    }}>Top recommendation</p>
+                    <p style={{ fontSize: 13, color: "var(--fg-secondary)", lineHeight: 1.5 }}>
+                      {results.summary.topRecommendation}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* Answer Detail */}
+            {/* Answer selector */}
+            <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
+              {results.answers.map((a, i) => {
+                const pct = (a.overallScore / a.maxScore) * 100;
+                const dotColor = pct >= 75 ? "var(--green)" : pct >= 50 ? "var(--orange)" : "var(--red)";
+                const active = activeAnswer === i;
+                return (
+                  <button key={i} onClick={() => { setActiveAnswer(i); setActiveTab("scores"); }} style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    padding: "7px 14px", borderRadius: 6,
+                    border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
+                    background: active ? "var(--accent-bg)" : "var(--surface)",
+                    color: active ? "var(--accent)" : "var(--fg-secondary)",
+                    fontSize: 13, fontWeight: 500, transition: "all 0.15s ease",
+                  }}>
+                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11 }}>Q{i + 1}</span>
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: dotColor, display: "inline-block", flexShrink: 0 }} />
+                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>{a.overallScore}/{a.maxScore}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Answer detail card */}
             {answer && (
-              <div className="glass-card" style={{ overflow: "hidden" }}>
-                {/* Question Header */}
-                <div style={{ padding: "20px 24px", borderBottom: "1px solid var(--border)" }}>
-                  <span className="tag" style={{ background: "var(--accent-glow)", color: "var(--accent)", marginBottom: 8, display: "inline-flex" }}>Question {activeAnswer + 1}</span>
-                  <h3 style={{ fontSize: 16, fontWeight: 700, fontFamily: "var(--font-display)", lineHeight: 1.4, marginTop: 6 }}>{answer.question}</h3>
+              <div style={{ border: "1px solid var(--border)", borderRadius: 8, background: "var(--surface)", overflow: "hidden" }}>
+
+                {/* Question header */}
+                <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)" }}>
+                  <span style={{
+                    fontFamily: "'JetBrains Mono', monospace", fontSize: 11,
+                    color: "var(--dim)", textTransform: "uppercase", letterSpacing: "0.06em",
+                    display: "block", marginBottom: 6,
+                  }}>Question {activeAnswer + 1}</span>
+                  <p style={{ fontSize: 14, fontWeight: 500, color: "var(--fg)", lineHeight: 1.5 }}>
+                    {answer.question}
+                  </p>
                 </div>
 
-                {/* Tabs */}
-                <div style={{ display: "flex", gap: 4, padding: "12px 24px", borderBottom: "1px solid var(--border)", background: "var(--bg-secondary)" }}>
+                {/* Notion underline tabs */}
+                <div style={{ display: "flex", borderBottom: "1px solid var(--border)", padding: "0 20px" }}>
                   {[
-                    { id: "scores", label: "📊 Scores" },
-                    { id: "errors", label: `⚠️ Errors (${answer.factualErrors.length})` },
-                    { id: "improve", label: `🎯 Improve (${answer.improvements.length})` },
-                    { id: "text", label: "📄 Extracted" },
+                    { id: "scores", label: "Scores" },
+                    { id: "errors", label: `Errors (${answer.factualErrors.length})` },
+                    { id: "improve", label: `Improve (${answer.improvements.length})` },
+                    { id: "text", label: "Extracted" },
                   ].map((tab) => (
-                    <button key={tab.id} className={`tab-btn ${activeTab === tab.id ? "active" : ""}`} onClick={() => setActiveTab(tab.id)}>
+                    <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
+                      padding: "10px 14px",
+                      border: "none", background: "transparent",
+                      fontSize: 13, fontWeight: 500,
+                      color: activeTab === tab.id ? "var(--fg)" : "var(--dim)",
+                      borderBottom: activeTab === tab.id ? "2px solid var(--fg)" : "2px solid transparent",
+                      marginBottom: -1, transition: "color 0.15s ease",
+                    }}>
                       {tab.label}
                     </button>
                   ))}
                 </div>
 
-                <div style={{ padding: 24 }}>
-                  {/* Scores Tab */}
+                {/* Tab content */}
+                <div style={{ padding: 20 }}>
+
+                  {/* Scores tab */}
                   {activeTab === "scores" && (
                     <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
-                        <div style={{ position: "relative", width: 80, height: 80 }}>
-                          <ScoreRing score={answer.overallScore} max={answer.maxScore} size={80} strokeWidth={6} />
-                          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                            <span style={{ fontSize: 20, fontWeight: 800, fontFamily: "var(--font-display)" }}>{answer.overallScore}</span>
-                          </div>
-                        </div>
+                      <div style={{
+                        display: "flex", alignItems: "center", gap: 16,
+                        marginBottom: 24, paddingBottom: 20, borderBottom: "1px solid var(--border)",
+                      }}>
+                        <ScoreRing score={answer.overallScore} max={answer.maxScore} size={80} />
                         <div>
-                          <p style={{ fontSize: 13, color: "var(--text-secondary)", fontWeight: 500 }}>Overall Score</p>
-                          <p style={{ fontSize: 22, fontWeight: 800, fontFamily: "var(--font-display)" }}>{answer.overallScore} / {answer.maxScore}</p>
+                          <p style={{ fontSize: 12, color: "var(--dim)", marginBottom: 2 }}>Answer score</p>
+                          <p style={{
+                            fontFamily: "'Noto Serif', Georgia, serif",
+                            fontWeight: 600, fontSize: 22, color: "var(--fg)",
+                          }}>{answer.overallScore} / {answer.maxScore}</p>
                         </div>
                       </div>
+                      <p style={{
+                        fontSize: 11, fontWeight: 600, color: "var(--dim)",
+                        textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 16,
+                      }}>Dimension breakdown</p>
                       {answer.dimensions.map((d, i) => (
-                        <ScoreBar key={i} score={d.score} max={d.max} label={d.name} comment={d.comment} delay={i * 100} />
+                        <ScoreBar key={i} label={d.name} score={d.score} max={d.max} comment={d.comment} delay={i * 80} />
                       ))}
                     </div>
                   )}
 
-                  {/* Errors Tab */}
+                  {/* Errors tab */}
                   {activeTab === "errors" && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                       {answer.factualErrors.length === 0 ? (
-                        <div style={{ textAlign: "center", padding: 32 }}>
-                          <p style={{ fontSize: 36, marginBottom: 8 }}>✅</p>
-                          <p style={{ fontWeight: 600, fontFamily: "var(--font-display)" }}>No factual errors detected!</p>
+                        <div style={{
+                          padding: 24, textAlign: "center",
+                          border: "1px solid var(--border)", borderRadius: 8, background: "var(--green-bg)",
+                        }}>
+                          <div style={{ color: "var(--green)", display: "flex", justifyContent: "center", marginBottom: 8 }}>
+                            <IconCheck size={20} />
+                          </div>
+                          <p style={{ fontWeight: 500, fontSize: 14, color: "var(--green)" }}>No factual errors detected</p>
                         </div>
                       ) : answer.factualErrors.map((err, i) => (
-                        <div key={i} style={{ padding: 16, borderRadius: 12, border: "1px solid var(--border)", background: "var(--error-bg)", animation: `fadeUp ${0.3 + i * 0.15}s ease` }}>
-                          <div style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 10 }}>
-                            <span style={{ fontSize: 16 }}>❌</span>
+                        <div key={i} style={{ borderRadius: 8, border: "1px solid var(--border)", overflow: "hidden" }}>
+                          <div style={{ padding: "12px 16px", background: "var(--red-bg)", display: "flex", gap: 10 }}>
+                            <div style={{ color: "var(--red)", flexShrink: 0, marginTop: 1 }}><IconX size={14} /></div>
                             <div>
-                              <p style={{ fontSize: 12, fontWeight: 600, color: "var(--error)", marginBottom: 2, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.03em" }}>Error Found</p>
-                              <p style={{ fontSize: 14, color: "var(--text-primary)", lineHeight: 1.5 }}>{err.text}</p>
+                              <p style={{ fontSize: 11, fontWeight: 600, color: "var(--red)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Error</p>
+                              <p style={{ fontSize: 13, color: "var(--fg)", lineHeight: 1.5 }}>{err.text}</p>
                             </div>
                           </div>
-                          <div style={{ display: "flex", gap: 8, alignItems: "flex-start", paddingTop: 10, borderTop: "1px solid var(--border)" }}>
-                            <span style={{ fontSize: 16 }}>✅</span>
+                          <div style={{ padding: "12px 16px", background: "var(--green-bg)", display: "flex", gap: 10 }}>
+                            <div style={{ color: "var(--green)", flexShrink: 0, marginTop: 1 }}><IconCheck size={14} /></div>
                             <div>
-                              <p style={{ fontSize: 12, fontWeight: 600, color: "var(--success)", marginBottom: 2, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.03em" }}>Correction</p>
-                              <p style={{ fontSize: 14, color: "var(--text-primary)", lineHeight: 1.5 }}>{err.correction}</p>
+                              <p style={{ fontSize: 11, fontWeight: 600, color: "var(--green)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Correction</p>
+                              <p style={{ fontSize: 13, color: "var(--fg)", lineHeight: 1.5 }}>{err.correction}</p>
                             </div>
                           </div>
                         </div>
@@ -492,33 +729,64 @@ export default function UPSCEvaluator() {
                     </div>
                   )}
 
-                  {/* Improvements Tab */}
+                  {/* Improve tab */}
                   {activeTab === "improve" && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                       {answer.improvements.map((imp, i) => (
-                        <div key={i} style={{ display: "flex", gap: 12, padding: 14, borderRadius: 12, background: "var(--bg-secondary)", border: "1px solid var(--border)", animation: `fadeUp ${0.3 + i * 0.1}s ease` }}>
-                          <div style={{ width: 28, height: 28, borderRadius: 8, background: "var(--accent-glow)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color: "var(--accent)", fontFamily: "var(--font-mono)", flexShrink: 0 }}>
-                            {i + 1}
-                          </div>
-                          <p style={{ fontSize: 13, lineHeight: 1.6, color: "var(--text-primary)" }}>{imp}</p>
+                        <div key={i} style={{
+                          display: "flex", gap: 12, padding: "11px 12px",
+                          borderRadius: 6, border: "1px solid var(--border)",
+                          transition: "background 0.15s ease",
+                        }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = "var(--surface-raised)")}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                        >
+                          <div style={{
+                            width: 22, height: 22, borderRadius: 4, flexShrink: 0,
+                            background: "var(--accent-bg)", color: "var(--accent)",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 600,
+                          }}>{i + 1}</div>
+                          <p style={{ fontSize: 13, color: "var(--fg)", lineHeight: 1.6, paddingTop: 2 }}>{imp}</p>
                         </div>
                       ))}
                     </div>
                   )}
 
-                  {/* Extracted Text Tab */}
+                  {/* Extracted text tab */}
                   {activeTab === "text" && (
-                    <div style={{ padding: 16, borderRadius: 12, background: "var(--bg-secondary)", border: "1px solid var(--border)" }}>
-                      <p style={{ fontSize: 11, fontWeight: 600, color: "var(--text-tertiary)", marginBottom: 8, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.05em" }}>OCR Output</p>
-                      <p style={{ fontSize: 14, lineHeight: 1.8, color: "var(--text-primary)", fontFamily: "var(--font-body)", whiteSpace: "pre-wrap" }}>{answer.extractedText}</p>
+                    <div style={{
+                      padding: 16, borderRadius: 6,
+                      background: "var(--surface-raised)", border: "1px solid var(--border)",
+                    }}>
+                      <p style={{
+                        fontSize: 11, fontWeight: 600, color: "var(--dim)",
+                        textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 10,
+                      }}>OCR output</p>
+                      <p style={{
+                        fontFamily: "'JetBrains Mono', Menlo, monospace",
+                        fontSize: 12, lineHeight: 1.8,
+                        color: "var(--fg-secondary)", whiteSpace: "pre-wrap",
+                      }}>{answer.extractedText}</p>
                     </div>
                   )}
+
                 </div>
               </div>
             )}
           </div>
         )}
-      </div>
+      </main>
+
+      {/* ── Footer ── */}
+      <footer style={{
+        borderTop: "1px solid var(--border)",
+        padding: "12px 24px",
+        display: "flex", justifyContent: "space-between", alignItems: "center",
+      }}>
+        <span style={{ fontSize: 12, color: "var(--dim)" }}>Powered by Llama 3.3 70B</span>
+        <span style={{ fontFamily: "'JetBrains Mono', Menlo, monospace", fontSize: 12, color: "var(--dim)" }}>v1.0</span>
+      </footer>
     </div>
   );
 }
