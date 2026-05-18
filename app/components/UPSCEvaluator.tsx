@@ -138,6 +138,7 @@ export default function UPSCEvaluator() {
   };
 
   const handleUpload = async () => {
+    if (!file) return;
     setLoading(true);
     setProgress(0);
     setLoadingStep(0);
