@@ -124,7 +124,7 @@ export default function UPSCEvaluator() {
   const [activeAnswer, setActiveAnswer] = useState(0);
   const [activeTab, setActiveTab] = useState("scores");
   const [darkMode, setDarkMode] = useState(true);
-  const fileRef = useRef();
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const loadingSteps = [
     { icon: "📄", text: "Extracting text from PDF..." },
