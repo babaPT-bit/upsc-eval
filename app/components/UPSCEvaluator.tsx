@@ -61,7 +61,7 @@ const MOCK_RESULTS = {
 };
 
 // Animated counter
-function AnimatedScore({ value, max, duration = 1200 }) {
+function AnimatedScore({ value, max, duration = 1200 }: { value: number; max: number; duration?: number }) {
   const [display, setDisplay] = useState(0);
   useEffect(() => {
     let start = 0;
@@ -77,7 +77,7 @@ function AnimatedScore({ value, max, duration = 1200 }) {
 }
 
 // Score ring
-function ScoreRing({ score, max, size = 120, strokeWidth = 8 }) {
+function ScoreRing({ score, max, size = 120, strokeWidth = 8 }: { score: number; max: number; size?: number; strokeWidth?: number }) {
   const pct = (score / max) * 100;
   const r = (size - strokeWidth) / 2;
   const circ = 2 * Math.PI * r;
@@ -94,7 +94,7 @@ function ScoreRing({ score, max, size = 120, strokeWidth = 8 }) {
   );
 }
 
-function ScoreBar({ score, max, label, comment, delay = 0 }) {
+function ScoreBar({ score, max, label, comment, delay = 0 }: { score: number; max: number; label: string; comment: string; delay?: number }) {
   const pct = (score / max) * 100;
   const color = pct >= 75 ? "#22c55e" : pct >= 50 ? "#f59e0b" : "#ef4444";
   const [visible, setVisible] = useState(false);
