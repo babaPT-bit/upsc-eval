@@ -114,13 +114,18 @@ function ScoreBar({ score, max, label, comment, delay = 0 }: { score: number; ma
   );
 }
 
+interface Dimension { name: string; score: number; max: number; comment: string; }
+interface FactualError { text: string; correction: string; }
+interface Answer { question: string; extractedText: string; overallScore: number; maxScore: number; dimensions: Dimension[]; factualErrors: FactualError[]; improvements: string[]; }
+interface Results { answers: Answer[]; summary: { totalScore: number; totalMax: number; percentage: number; strengths: string[]; weaknesses: string[]; topRecommendation: string; }; }
+
 export default function UPSCEvaluator() {
   const [file, setFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [loadingStep, setLoadingStep] = useState(0);
-  const [results, setResults] = useState(null);
+  const [results, setResults] = useState<Results | null>(null);
   const [activeAnswer, setActiveAnswer] = useState(0);
   const [activeTab, setActiveTab] = useState("scores");
   const [darkMode, setDarkMode] = useState(true);
