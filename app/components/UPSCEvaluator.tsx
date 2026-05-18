@@ -176,7 +176,7 @@ export default function UPSCEvaluator() {
     } catch (error) {
       clearInterval(interval);
       setLoading(false);
-      alert("Error: " + error.message);
+      alert("Error: " + (error instanceof Error ? error.message : String(error)));
     }
   };
 
