@@ -307,7 +307,7 @@ export default function UPSCEvaluator() {
               onDragLeave={() => setDragActive(false)}
               onDrop={(e) => { e.preventDefault(); setDragActive(false); handleFile(e.dataTransfer.files[0]); }}
               style={{ padding: 48, textAlign: "center", cursor: "pointer", border: dragActive ? "2px dashed var(--accent)" : "1px solid var(--border)", background: dragActive ? "var(--accent-glow)" : "var(--bg-card)", transition: "all 0.3s ease", maxWidth: 560, margin: "0 auto" }}>
-              <input ref={fileRef} type="file" accept=".pdf" onChange={(e) => handleFile(e.target.files[0])} style={{ display: "none" }} />
+              <input ref={fileRef} type="file" accept=".pdf" onChange={(e) => handleFile(e.target.files?.[0])} style={{ display: "none" }} />
               <div style={{ fontSize: 48, marginBottom: 16, animation: "float 3s ease-in-out infinite" }}>
                 {file ? "📄" : "☁️"}
               </div>
