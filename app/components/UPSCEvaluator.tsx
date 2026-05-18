@@ -327,8 +327,8 @@ export default function UPSCEvaluator() {
             {file && (
               <div style={{ textAlign: "center", marginTop: 24, animation: "fadeUp 0.4s ease" }}>
                 <button onClick={handleUpload} style={{ padding: "14px 40px", background: "linear-gradient(135deg, var(--accent), #818cf8)", color: "white", border: "none", borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "var(--font-display)", letterSpacing: "0.01em", boxShadow: "0 4px 20px var(--accent-glow)", transition: "transform 0.2s" }}
-                  onMouseEnter={(e) => e.target.style.transform = "scale(1.03)"}
-                  onMouseLeave={(e) => e.target.style.transform = "scale(1)"}>
+                  onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.03)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}>
                   Evaluate My Answers →
                 </button>
               </div>
