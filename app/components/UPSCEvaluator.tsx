@@ -56,6 +56,26 @@ const TIPS = [
   "A way forward section at the end is expected for most Discuss/Examine questions. Don't skip it.",
 ];
 
+const DID_YOU_KNOW = [
+  { big: "Article 356", fact: "President's Rule has been imposed 132 times since 1950. The most frequent decade was the 1970s with 40 impositions.", tags: ["GS2", "Polity"] },
+  { big: "90 seconds", fact: "That's roughly how long a UPSC examiner spends on each answer. Your introduction and conclusion are read most carefully.", tags: ["Strategy"] },
+  { big: "45–50%", fact: "The average UPSC Mains score across all candidates. Scoring above 55% consistently puts you in the top bracket.", tags: ["Scoring"] },
+  { big: "Article 21", fact: "The most litigated fundamental right. The Supreme Court has expanded its scope to include privacy, dignity, clean environment, and livelihood.", tags: ["GS2", "Polity"] },
+  { big: "7-5-3 Rule", fact: "15-mark answers need ~7 substantive points, 10-mark need ~5, and 5-mark need ~3. Point density is a key scoring dimension.", tags: ["Strategy"] },
+  { big: "73rd Amendment", fact: "Added Part IX to the Constitution in 1992, creating a three-tier Panchayati Raj system. It reserved 1/3 seats for women — now 50% in many states.", tags: ["GS2", "Polity"] },
+  { big: "NITI Aayog", fact: "Replaced the Planning Commission in 2015. Unlike its predecessor, it has no power to allocate funds — it's a think tank, not a funding body.", tags: ["GS2", "Governance"] },
+  { big: "Sarkaria Commission", fact: "Set up in 1983 to examine Centre-State relations. Its key recommendation — the Governor should be a non-political person — is still frequently violated.", tags: ["GS2", "Federalism"] },
+];
+
+const QUIZ_QUESTIONS = [
+  { question: "The ___ Committee recommended the creation of an All India Judicial Service.", options: ["Sarkaria Commission", "Law Commission (14th Report)", "Swaran Singh Committee", "Punchhi Commission"], correct: 1, explanation: "The Law Commission in its 14th Report (1958) recommended an All India Judicial Service for the subordinate judiciary." },
+  { question: "Which Article empowers the President to declare a Financial Emergency?", options: ["Article 352", "Article 356", "Article 360", "Article 365"], correct: 2, explanation: "Article 360 deals with Financial Emergency. It has never been proclaimed in India so far." },
+  { question: "The Panchayati Raj system was constitutionalized by which Amendment?", options: ["71st Amendment", "72nd Amendment", "73rd Amendment", "74th Amendment"], correct: 2, explanation: "The 73rd Amendment (1992) added Part IX to the Constitution, establishing a three-tier Panchayati Raj system." },
+  { question: "Who appoints the Chief Election Commissioner of India?", options: ["Prime Minister", "President", "Chief Justice of India", "Parliament"], correct: 1, explanation: "Article 324(2) — the President appoints the CEC. Since 2023, a committee (PM + LoP + CJI) recommends the appointment." },
+  { question: "Which schedule of the Constitution deals with anti-defection provisions?", options: ["8th Schedule", "9th Schedule", "10th Schedule", "11th Schedule"], correct: 2, explanation: "The 10th Schedule, added by the 52nd Amendment Act (1985), contains anti-defection provisions." },
+  { question: "The concept of 'Basic Structure' of the Constitution was established in which case?", options: ["Golaknath v. State of Punjab", "Kesavananda Bharati v. State of Kerala", "Minerva Mills v. Union of India", "Maneka Gandhi v. Union of India"], correct: 1, explanation: "Kesavananda Bharati (1973) established that Parliament cannot alter the basic structure of the Constitution." },
+];
+
 // Fallback mock result — used when API is unavailable or returns an error
 const MOCK_RESULT: EvalResult = {
   overallScore: 5.4,
@@ -353,6 +373,13 @@ function IconSun({ size = 15 }: { size?: number }) {
     </svg>
   );
 }
+function IconChevronDown({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="6 9 12 15 18 9" />
+    </svg>
+  );
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════
    SCORE RING
@@ -479,6 +506,11 @@ export default function UPSCEvaluator() {
   const [resultTab, setResultTab] = useState<ResultTab>("scores");
   const [darkMode, setDarkMode] = useState(false);
 
+  /* ── V3 entry mode ── */
+  const [entryMode, setEntryMode] = useState<"upload" | "practice" | null>(null);
+  const [practiceSource, setPracticeSource] = useState<"pyq" | "write">("pyq");
+  const [sampleExpanded, setSampleExpanded] = useState(false);
+
   /* ── PYQ ── */
   const [pyqPaper, setPyqPaper] = useState("GS1");
   const [pyqYear, setPyqYear] = useState("2024");
@@ -502,6 +534,9 @@ export default function UPSCEvaluator() {
   /* ── loading ── */
   const [loadingStep, setLoadingStep] = useState(-1);
   const [tipIdx, setTipIdx] = useState(0);
+  const [loadingSeqPos, setLoadingSeqPos] = useState(0);
+  const [quizAnswered, setQuizAnswered] = useState<number | null>(null);
+  const [quizScore, setQuizScore] = useState({ correct: 0, total: 0 });
 
   /* ── results ── */
   const [result, setResult] = useState<EvalResult | null>(null);
@@ -545,7 +580,6 @@ export default function UPSCEvaluator() {
         if (cancelled) return;
 
         if (!response.ok) {
-          // 404 on evaluate-text means endpoint not live yet — use mock
           if (response.status === 404 && entryTab !== "pdf") {
             console.warn("evaluate-text not available yet — showing sample result");
           } else {
@@ -600,25 +634,45 @@ export default function UPSCEvaluator() {
     return () => window.clearInterval(id);
   }, [screen]);
 
+  /* ── loading card sequence rotation ── */
+  useEffect(() => {
+    if (screen !== "loading") return;
+    const isQuiz = loadingSeqPos % 2 !== 0;
+    if (isQuiz && quizAnswered === null) return; // wait for user to tap
+    const delay = isQuiz ? 3000 : 5000;
+    const timer = window.setTimeout(() => {
+      setLoadingSeqPos(p => p + 1);
+      setQuizAnswered(null);
+    }, delay);
+    return () => window.clearTimeout(timer);
+  }, [screen, loadingSeqPos, quizAnswered]);
+
   /* ── helpers ── */
   const canEvaluate =
-    entryTab === "pdf" ? !!pdfFile :
-    entryTab === "pyq" ? (!!selectedPYQ && editorText.trim().length > 20) :
-    (writeQuestion.trim().length > 3 && editorText.trim().length > 20);
+    entryMode === "upload" ? !!pdfFile :
+    entryMode === "practice" && practiceSource === "pyq" ? (!!selectedPYQ && editorText.trim().length > 20) :
+    entryMode === "practice" && practiceSource === "write" ? (writeQuestion.trim().length > 3 && editorText.trim().length > 20) :
+    false;
 
   const pctColor = (p: number) => p >= 75 ? "#448361" : p >= 50 ? "#C29243" : "#D44C47";
 
   const doEvaluate = () => {
-    if (entryTab === "pyq") {
+    if (entryMode === "practice" && practiceSource === "pyq") {
       setSubmittedQuestion(selectedPYQ?.q ?? "");
       setSubmittedText(editorText);
-    } else if (entryTab === "write") {
+      setEntryTab("pyq");
+    } else if (entryMode === "practice" && practiceSource === "write") {
       setSubmittedQuestion(writeQuestion);
       setSubmittedText(editorText);
+      setEntryTab("write");
     } else {
       setSubmittedQuestion("");
-      setSubmittedText(""); // Will be filled by API response
+      setSubmittedText("");
+      setEntryTab("pdf");
     }
+    setLoadingSeqPos(0);
+    setQuizAnswered(null);
+    setQuizScore({ correct: 0, total: 0 });
     setLoadingStep(-1);
     setScreen("loading");
   };
@@ -628,11 +682,11 @@ export default function UPSCEvaluator() {
     setWriteQuestion(q);
     setEditorKey(k => k + 1);
     setEditorHtml(""); setEditorText("");
-    setEntryTab("write");
+    setEntryMode("practice"); setPracticeSource("write"); setEntryTab("write");
     setScreen("entry");
   };
 
-  const doNewPDF = () => { setPdfFile(null); setEntryTab("pdf"); setScreen("entry"); };
+  const doNewPDF = () => { setPdfFile(null); setEntryMode("upload"); setEntryTab("pdf"); setScreen("entry"); };
 
   const doShare = () => {
     if (!result) return;
@@ -686,6 +740,11 @@ export default function UPSCEvaluator() {
     .v3-fbtn:hover { border-color:var(--c-text-tertiary); }
     .v3-fbtn.agree { border-color:var(--c-green); color:var(--c-green); background:var(--c-green-bg); }
     .v3-fbtn.disagree { border-color:var(--c-red); color:var(--c-red); background:var(--c-red-bg); }
+    .entry-card { text-align:left; padding:18px 18px 16px; border-radius:10px; border:1px solid var(--c-border); background:var(--c-surface); cursor:pointer; transition:border-color 0.15s, background 0.15s; }
+    .entry-card:hover { border-color:var(--c-border-hover); }
+    .entry-card.active { border-color:var(--c-accent); background:var(--c-accent-bg); }
+    .quiz-opt { text-align:left; padding:10px 14px; border-radius:6px; font-size:13px; font-family:inherit; cursor:pointer; transition:all 0.15s; }
+    .quiz-opt:disabled { cursor:default; }
   `;
 
   /* ════════════════════════════════════════════════════════════════════════
@@ -717,103 +776,75 @@ export default function UPSCEvaluator() {
             SCREEN 1 — ENTRY
         ════════════════════════════════════════════════════════════════ */}
         {screen === "entry" && (
-          <div style={{ animation: "upscFadeIn 0.2s ease", paddingTop: 32, paddingBottom: 56 }}>
+          <div style={{ animation: "upscFadeIn 0.2s ease", paddingTop: 40, paddingBottom: 64 }}>
 
             {/* Session warning */}
             {attempts.length > 0 && (
-              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 6, background: "var(--c-amber-bg)", border: "1px solid var(--c-amber)", color: "var(--c-amber)", marginBottom: 20, fontSize: 13 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", borderRadius: 6, background: "var(--c-amber-bg)", border: "1px solid var(--c-amber)", color: "var(--c-amber)", marginBottom: 24, fontSize: 13 }}>
                 <span style={{ flexShrink: 0 }}><IconWarning /></span>
                 <span style={{ color: "var(--c-text-secondary)" }}>Session active — {attempts.length} attempt(s) recorded. Do not close this tab or your attempt history will be lost.</span>
               </div>
             )}
 
             {/* Hero */}
-            <div style={{ marginBottom: 28 }}>
-              <p style={{ fontSize: 11, fontWeight: 600, color: "var(--c-accent)", textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: "'JetBrains Mono',monospace", marginBottom: 10 }}>AI-Powered Evaluation</p>
-              <h1 style={{ fontFamily: "'Noto Serif',Georgia,serif", fontWeight: 700, fontSize: 26, lineHeight: 1.3, marginBottom: 8 }}>Evaluate your UPSC Mains answer</h1>
-              <p style={{ color: "var(--c-text-secondary)", fontSize: 14, lineHeight: 1.6 }}>Get scored across 7 dimensions with factual error detection and specific improvements.</p>
+            <div style={{ marginBottom: 32 }}>
+              <p style={{ fontSize: 11, fontWeight: 600, color: "var(--c-accent)", textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: "'JetBrains Mono',monospace", marginBottom: 10 }}>AI trained on UPSC patterns</p>
+              <h1 style={{ fontFamily: "'Noto Serif',Georgia,serif", fontWeight: 700, fontSize: 28, lineHeight: 1.3, marginBottom: 10 }}>Write. Get feedback. Rewrite. Improve.</h1>
+              <p style={{ color: "var(--c-text-secondary)", fontSize: 14, lineHeight: 1.65, marginBottom: 16 }}>Scored across 7 dimensions — factual accuracy, structure, current affairs, and more.</p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                {[
+                  { dot: "var(--c-green)", label: "7 scoring dimensions" },
+                  { dot: "var(--c-accent)", label: "Factual error detection" },
+                  { dot: "var(--c-amber)", label: "PYQ bank included" },
+                ].map((pill, i) => (
+                  <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 12px", borderRadius: 20, border: "1px solid var(--c-border)", background: "var(--c-surface)", fontSize: 12, color: "var(--c-text-secondary)" }}>
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: pill.dot, flexShrink: 0 }} />
+                    {pill.label}
+                  </span>
+                ))}
+              </div>
             </div>
 
-            {/* Entry tabs */}
-            <div style={{ display: "flex", borderBottom: "1px solid var(--c-border)", marginBottom: 24 }}>
-              {([ { id: "pyq" as EntryTab, icon: <IconBook />, label: "Practice PYQ" }, { id: "write" as EntryTab, icon: <IconPen />, label: "Write Your Own" }, { id: "pdf" as EntryTab, icon: <IconUpload />, label: "Upload PDF" } ]).map(t => (
-                <button key={t.id} className={`v3-tab${entryTab === t.id ? " on" : ""}`} onClick={() => setEntryTab(t.id)}>
-                  {t.icon}<span className="v3-tab-label">{t.label}</span>
-                </button>
-              ))}
+            {/* Entry cards */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 4 }}>
+              {/* Upload card */}
+              <button
+                className={`entry-card${entryMode === "upload" ? " active" : ""}`}
+                onClick={() => setEntryMode(entryMode === "upload" ? null : "upload")}
+              >
+                <div style={{ width: 36, height: 36, borderRadius: "50%", background: entryMode === "upload" ? "var(--c-accent)" : "var(--c-accent-bg)", display: "flex", alignItems: "center", justifyContent: "center", color: entryMode === "upload" ? "#fff" : "var(--c-accent)", marginBottom: 12, transition: "background 0.15s" }}>
+                  <IconUpload size={16} />
+                </div>
+                <p style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>Upload Answer Sheet</p>
+                <p style={{ fontSize: 12, color: "var(--c-text-secondary)", lineHeight: 1.5, marginBottom: 10 }}>Evaluate a handwritten or typed PDF answer sheet.</p>
+                <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 4, background: "var(--c-accent-bg)", color: "var(--c-accent)", fontSize: 11, fontWeight: 600, fontFamily: "'JetBrains Mono',monospace" }}>Reads handwriting</span>
+              </button>
+
+              {/* Practice card */}
+              <button
+                className={`entry-card${entryMode === "practice" ? " active" : ""}`}
+                onClick={() => setEntryMode(entryMode === "practice" ? null : "practice")}
+              >
+                <div style={{ width: 36, height: 36, borderRadius: "50%", background: entryMode === "practice" ? "var(--c-green)" : "var(--c-green-bg)", display: "flex", alignItems: "center", justifyContent: "center", color: entryMode === "practice" ? "#fff" : "var(--c-green)", marginBottom: 12, transition: "background 0.15s" }}>
+                  <IconPen size={16} />
+                </div>
+                <p style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>Practice Here</p>
+                <p style={{ fontSize: 12, color: "var(--c-text-secondary)", lineHeight: 1.5, marginBottom: 10 }}>Type your answer in the browser — choose from PYQ bank or write your own question.</p>
+                <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 4, background: "var(--c-green-bg)", color: "var(--c-green)", fontSize: 11, fontWeight: 600, fontFamily: "'JetBrains Mono',monospace" }}>No PDF needed</span>
+              </button>
             </div>
 
-            {/* ── TAB: PYQ ── */}
-            {entryTab === "pyq" && (
-              <div style={{ animation: "upscSlideIn 0.15s ease" }}>
-                {/* Filter row */}
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16, alignItems: "center" }}>
-                  <span style={{ fontSize: 12, color: "var(--c-text-tertiary)", marginRight: 2 }}>Paper:</span>
-                  {["GS1","GS2","GS3","GS4"].map(p => (
-                    <button key={p} className={`v3-chip${pyqPaper === p ? " on" : ""}`} onClick={() => { setPyqPaper(p); setSelectedPYQ(null); }}>{p}</button>
-                  ))}
-                  <div style={{ width: 1, height: 16, background: "var(--c-border)", margin: "0 4px" }} />
-                  <span style={{ fontSize: 12, color: "var(--c-text-tertiary)", marginRight: 2 }}>Year:</span>
-                  {["2024","2023","2022"].map(y => {
-                    const has = !!(SAMPLE_PYQ[pyqPaper]?.[y]);
-                    return (
-                      <button key={y} className={`v3-chip${pyqYear === y ? " on" : ""}`}
-                        onClick={() => { if (has) { setPyqYear(y); setSelectedPYQ(null); } }}
-                        style={{ opacity: has ? 1 : 0.4, cursor: has ? "pointer" : "default" }}>{y}</button>
-                    );
-                  })}
-                </div>
-
-                {/* Question list */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
-                  {!(SAMPLE_PYQ[pyqPaper]?.[pyqYear]?.length) ? (
-                    <p style={{ color: "var(--c-text-tertiary)", fontSize: 13, padding: "16px 0" }}>No questions available for this combination.</p>
-                  ) : (SAMPLE_PYQ[pyqPaper]?.[pyqYear] ?? []).map(item => (
-                    <button key={item.id} onClick={() => setSelectedPYQ(item)}
-                      style={{ textAlign: "left", padding: "12px 14px", borderRadius: 8, border: `1px solid ${selectedPYQ?.id === item.id ? "var(--c-accent)" : "var(--c-border)"}`, background: selectedPYQ?.id === item.id ? "var(--c-accent-bg)" : "var(--c-surface)", cursor: "pointer", transition: "all 0.12s", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}
-                      onMouseEnter={e => { if (selectedPYQ?.id !== item.id) e.currentTarget.style.borderColor = "var(--c-text-tertiary)"; }}
-                      onMouseLeave={e => { if (selectedPYQ?.id !== item.id) e.currentTarget.style.borderColor = "var(--c-border)"; }}>
-                      <span style={{ fontSize: 13, lineHeight: 1.6, color: "var(--c-text)", flex: 1 }}>{item.q}</span>
-                      <span style={{ flexShrink: 0, fontFamily: "'JetBrains Mono',monospace", fontSize: 11, fontWeight: 600, padding: "2px 7px", borderRadius: 4, background: "var(--c-surface-hover)", border: "1px solid var(--c-border)", color: "var(--c-text-secondary)" }}>{item.marks}m</span>
-                    </button>
-                  ))}
-                </div>
-
-                {/* Selected question + editor */}
-                {selectedPYQ && (
-                  <div style={{ animation: "upscSlideIn 0.15s ease" }}>
-                    <div style={{ borderLeft: "3px solid var(--c-accent)", padding: "12px 16px", background: "var(--c-accent-bg)", borderRadius: "0 6px 6px 0", marginBottom: 14 }}>
-                      <p style={{ fontFamily: "'Noto Serif',Georgia,serif", fontSize: 14, lineHeight: 1.75, color: "var(--c-text)" }}>{selectedPYQ.q}</p>
-                    </div>
-                    <NotionEditor key={`pyq-${editorKey}`} onChange={(h, t) => { setEditorHtml(h); setEditorText(t); }} placeholder="Write your answer here..." />
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* ── TAB: WRITE ── */}
-            {entryTab === "write" && (
-              <div style={{ animation: "upscSlideIn 0.15s ease" }}>
-                <input type="text" value={writeQuestion} onChange={e => setWriteQuestion(e.target.value)}
-                  placeholder='e.g. "Discuss the role of civil services in a democracy."'
-                  style={{ width: "100%", padding: "10px 14px", borderRadius: 6, border: "1px solid var(--c-border)", background: "var(--c-surface)", color: "var(--c-text)", fontSize: 14, marginBottom: 14, outline: "none", fontFamily: "inherit", transition: "border-color 0.15s" }}
-                  onFocus={e => e.target.style.borderColor = "var(--c-accent)"}
-                  onBlur={e => e.target.style.borderColor = "var(--c-border)"} />
-                <NotionEditor key={`write-${editorKey}`} onChange={(h, t) => { setEditorHtml(h); setEditorText(t); }} placeholder="Write your answer here..." />
-              </div>
-            )}
-
-            {/* ── TAB: PDF ── */}
-            {entryTab === "pdf" && (
-              <div style={{ animation: "upscSlideIn 0.15s ease" }}>
+            {/* ── UPLOAD ZONE ── */}
+            {entryMode === "upload" && (
+              <div style={{ animation: "upscSlideIn 0.15s ease", marginTop: 16, padding: "20px", borderRadius: 10, border: "1px solid var(--c-border)", background: "var(--c-surface)" }}>
                 <input ref={pdfRef} type="file" accept=".pdf" style={{ display: "none" }} onChange={e => setPdfFile(e.target.files?.[0] ?? null)} />
                 {!pdfFile ? (
                   <div onClick={() => pdfRef.current?.click()}
                     onDragOver={e => { e.preventDefault(); setDragActive(true); }}
                     onDragLeave={() => setDragActive(false)}
                     onDrop={e => { e.preventDefault(); setDragActive(false); const f = e.dataTransfer.files[0]; if (f?.type === "application/pdf") setPdfFile(f); }}
-                    style={{ border: `1.5px dashed ${dragActive ? "var(--c-accent)" : "var(--c-border)"}`, borderRadius: 10, padding: "52px 24px", textAlign: "center", cursor: "pointer", background: dragActive ? "var(--c-accent-bg)" : "var(--c-surface-hover)", transition: "all 0.15s" }}>
-                    <div style={{ color: "var(--c-text-tertiary)", display: "flex", justifyContent: "center", marginBottom: 12 }}><IconUpload size={28} /></div>
+                    style={{ border: `1.5px dashed ${dragActive ? "var(--c-accent)" : "var(--c-border)"}`, borderRadius: 8, padding: "40px 24px", textAlign: "center", cursor: "pointer", background: dragActive ? "var(--c-accent-bg)" : "var(--c-surface-hover)", transition: "all 0.15s" }}>
+                    <div style={{ color: "var(--c-text-tertiary)", display: "flex", justifyContent: "center", marginBottom: 10 }}><IconUpload size={24} /></div>
                     <p style={{ fontWeight: 500, fontSize: 14, marginBottom: 4 }}>Drop your answer sheet PDF here</p>
                     <p style={{ fontSize: 13, color: "var(--c-text-secondary)" }}>or click to browse</p>
                   </div>
@@ -831,13 +862,151 @@ export default function UPSCEvaluator() {
               </div>
             )}
 
+            {/* ── PRACTICE EDITOR ── */}
+            {entryMode === "practice" && (
+              <div style={{ animation: "upscSlideIn 0.15s ease", marginTop: 16, padding: "20px", borderRadius: 10, border: "1px solid var(--c-border)", background: "var(--c-surface)" }}>
+
+                {/* Sub-toggle */}
+                <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+                  <button className={`v3-chip${practiceSource === "pyq" ? " on" : ""}`} onClick={() => setPracticeSource("pyq")}>
+                    <span style={{ display: "flex", alignItems: "center", gap: 5 }}><IconBook size={12} /> Pick from PYQ Bank</span>
+                  </button>
+                  <button className={`v3-chip${practiceSource === "write" ? " on" : ""}`} onClick={() => setPracticeSource("write")}>
+                    <span style={{ display: "flex", alignItems: "center", gap: 5 }}><IconPen size={12} /> Write My Own</span>
+                  </button>
+                </div>
+
+                {/* PYQ source */}
+                {practiceSource === "pyq" && (
+                  <div style={{ animation: "upscSlideIn 0.15s ease" }}>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16, alignItems: "center" }}>
+                      <span style={{ fontSize: 12, color: "var(--c-text-tertiary)", marginRight: 2 }}>Paper:</span>
+                      {["GS1","GS2","GS3","GS4"].map(p => (
+                        <button key={p} className={`v3-chip${pyqPaper === p ? " on" : ""}`} onClick={() => { setPyqPaper(p); setSelectedPYQ(null); }}>{p}</button>
+                      ))}
+                      <div style={{ width: 1, height: 16, background: "var(--c-border)", margin: "0 4px" }} />
+                      <span style={{ fontSize: 12, color: "var(--c-text-tertiary)", marginRight: 2 }}>Year:</span>
+                      {["2024","2023","2022"].map(y => {
+                        const has = !!(SAMPLE_PYQ[pyqPaper]?.[y]);
+                        return (
+                          <button key={y} className={`v3-chip${pyqYear === y ? " on" : ""}`}
+                            onClick={() => { if (has) { setPyqYear(y); setSelectedPYQ(null); } }}
+                            style={{ opacity: has ? 1 : 0.4, cursor: has ? "pointer" : "default" }}>{y}</button>
+                        );
+                      })}
+                    </div>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
+                      {!(SAMPLE_PYQ[pyqPaper]?.[pyqYear]?.length) ? (
+                        <p style={{ color: "var(--c-text-tertiary)", fontSize: 13, padding: "16px 0" }}>No questions available for this combination.</p>
+                      ) : (SAMPLE_PYQ[pyqPaper]?.[pyqYear] ?? []).map(item => (
+                        <button key={item.id} onClick={() => setSelectedPYQ(item)}
+                          style={{ textAlign: "left", padding: "12px 14px", borderRadius: 8, border: `1px solid ${selectedPYQ?.id === item.id ? "var(--c-accent)" : "var(--c-border)"}`, background: selectedPYQ?.id === item.id ? "var(--c-accent-bg)" : "var(--c-surface-hover)", cursor: "pointer", transition: "all 0.12s", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}
+                          onMouseEnter={e => { if (selectedPYQ?.id !== item.id) e.currentTarget.style.borderColor = "var(--c-text-tertiary)"; }}
+                          onMouseLeave={e => { if (selectedPYQ?.id !== item.id) e.currentTarget.style.borderColor = "var(--c-border)"; }}>
+                          <span style={{ fontSize: 13, lineHeight: 1.6, color: "var(--c-text)", flex: 1 }}>{item.q}</span>
+                          <span style={{ flexShrink: 0, fontFamily: "'JetBrains Mono',monospace", fontSize: 11, fontWeight: 600, padding: "2px 7px", borderRadius: 4, background: "var(--c-surface)", border: "1px solid var(--c-border)", color: "var(--c-text-secondary)" }}>{item.marks}m</span>
+                        </button>
+                      ))}
+                    </div>
+
+                    {selectedPYQ && (
+                      <div style={{ animation: "upscSlideIn 0.15s ease" }}>
+                        <div style={{ borderLeft: "3px solid var(--c-accent)", padding: "12px 16px", background: "var(--c-accent-bg)", borderRadius: "0 6px 6px 0", marginBottom: 14 }}>
+                          <p style={{ fontFamily: "'Noto Serif',Georgia,serif", fontSize: 14, lineHeight: 1.75, color: "var(--c-text)" }}>{selectedPYQ.q}</p>
+                        </div>
+                        <NotionEditor key={`pyq-${editorKey}`} onChange={(h, t) => { setEditorHtml(h); setEditorText(t); }} placeholder="Write your answer here..." />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Write own source */}
+                {practiceSource === "write" && (
+                  <div style={{ animation: "upscSlideIn 0.15s ease" }}>
+                    <input type="text" value={writeQuestion} onChange={e => setWriteQuestion(e.target.value)}
+                      placeholder='e.g. "Discuss the role of civil services in a democracy."'
+                      style={{ width: "100%", padding: "10px 14px", borderRadius: 6, border: "1px solid var(--c-border)", background: "var(--c-surface-hover)", color: "var(--c-text)", fontSize: 14, marginBottom: 14, outline: "none", fontFamily: "inherit", transition: "border-color 0.15s" }}
+                      onFocus={e => e.target.style.borderColor = "var(--c-accent)"}
+                      onBlur={e => e.target.style.borderColor = "var(--c-border)"} />
+                    <NotionEditor key={`write-${editorKey}`} onChange={(h, t) => { setEditorHtml(h); setEditorText(t); }} placeholder="Write your answer here..." />
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Evaluate button */}
-            <div style={{ marginTop: 24 }}>
-              <button onClick={doEvaluate} disabled={!canEvaluate}
-                style={{ width: "100%", padding: "11px 24px", borderRadius: 6, border: "none", background: canEvaluate ? "var(--c-text)" : "var(--c-border)", color: canEvaluate ? "var(--c-bg)" : "var(--c-text-tertiary)", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, cursor: canEvaluate ? "pointer" : "not-allowed", transition: "background 0.15s, color 0.15s" }}>
-                Evaluate My Answer <IconArrowRight />
+            {entryMode !== null && (
+              <div style={{ marginTop: 20 }}>
+                <button onClick={doEvaluate} disabled={!canEvaluate}
+                  style={{ width: "100%", padding: "11px 24px", borderRadius: 6, border: "none", background: canEvaluate ? "var(--c-text)" : "var(--c-border)", color: canEvaluate ? "var(--c-bg)" : "var(--c-text-tertiary)", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, cursor: canEvaluate ? "pointer" : "not-allowed", transition: "background 0.15s, color 0.15s" }}>
+                  Evaluate My Answer <IconArrowRight />
+                </button>
+                <p style={{ textAlign: "center", marginTop: 10, fontSize: 12, color: "var(--c-text-tertiary)" }}>Free. No signup. No limits.</p>
+              </div>
+            )}
+
+            {/* Sample evaluation preview */}
+            <div style={{ marginTop: 36, border: "1px solid var(--c-border)", borderRadius: 10, background: "var(--c-surface)", overflow: "hidden" }}>
+              <button
+                onClick={() => setSampleExpanded(e => !e)}
+                style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 18px", background: "transparent", border: "none", cursor: "pointer", borderBottom: sampleExpanded ? "1px solid var(--c-border)" : "none", transition: "background 0.12s" }}
+                onMouseEnter={e => e.currentTarget.style.background = "var(--c-surface-hover)"}
+                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+              >
+                <div style={{ textAlign: "left" }}>
+                  <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>See a sample evaluation</p>
+                  <p style={{ fontSize: 12, color: "var(--c-text-secondary)" }}>GS2 — Governor's role · 54% · 7 dimensions scored</p>
+                </div>
+                <span style={{ color: "var(--c-text-tertiary)", display: "flex", alignItems: "center", transform: sampleExpanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>
+                  <IconChevronDown />
+                </span>
               </button>
+              {sampleExpanded && (
+                <div style={{ padding: "18px 20px", animation: "upscSlideIn 0.15s ease" }}>
+                  <div style={{ display: "flex", gap: 20, alignItems: "flex-start", flexWrap: "wrap", marginBottom: 16 }}>
+                    <ScoreRing score={MOCK_RESULT.overallScore} max={MOCK_RESULT.maxScore} size={76} />
+                    <div style={{ flex: 1, minWidth: 180 }}>
+                      <p style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 13, fontWeight: 700, marginBottom: 6 }}>{MOCK_RESULT.overallScore} / {MOCK_RESULT.maxScore} · {MOCK_RESULT.percentage}%</p>
+                      <p style={{ fontSize: 12, color: "var(--c-text-secondary)", lineHeight: 1.55 }}>{MOCK_RESULT.examinerVerdict.slice(0, 140)}…</p>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {MOCK_RESULT.dimensions.slice(0, 4).map((dim, i) => {
+                      const pct = (dim.score / dim.max) * 100;
+                      return (
+                        <div key={i}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 0 }}>
+                            <span style={{ fontSize: 12, color: "var(--c-text-secondary)" }}>{dim.name}</span>
+                            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, fontWeight: 700, color: pctColor(pct) }}>{dim.score}/{dim.max}</span>
+                          </div>
+                          <ScoreBar pct={pct} color={pctColor(pct)} delay={i * 60} />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
+
+            {/* How it works */}
+            <div style={{ marginTop: 36 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: "var(--c-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: "'JetBrains Mono',monospace", marginBottom: 18 }}>How it works</p>
+              {[
+                { n: "1", title: "Write or upload", desc: "Type your answer directly in the browser, or upload a handwritten or typed PDF answer sheet." },
+                { n: "2", title: "AI evaluates in seconds", desc: "Scored against 7 UPSC-specific dimensions including factual accuracy, structure, and current affairs integration." },
+                { n: "3", title: "Improve and retry", desc: "Get specific corrections, targeted improvements, and retry immediately — track your progress across attempts." },
+              ].map((step, i) => (
+                <div key={i} style={{ display: "flex", gap: 14, alignItems: "flex-start", marginBottom: i < 2 ? 18 : 0 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: "50%", border: "1px solid var(--c-accent)", background: "var(--c-accent-bg)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'JetBrains Mono',monospace", fontSize: 12, fontWeight: 700, color: "var(--c-accent)", flexShrink: 0 }}>{step.n}</div>
+                  <div>
+                    <p style={{ fontWeight: 600, fontSize: 13, marginBottom: 3 }}>{step.title}</p>
+                    <p style={{ fontSize: 13, color: "var(--c-text-secondary)", lineHeight: 1.55 }}>{step.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
           </div>
         )}
 
@@ -845,49 +1014,94 @@ export default function UPSCEvaluator() {
             SCREEN 2 — LOADING
         ════════════════════════════════════════════════════════════════ */}
         {screen === "loading" && (
-          <div style={{ animation: "upscFadeIn 0.2s ease", paddingTop: 64, paddingBottom: 48, maxWidth: 440, margin: "0 auto" }}>
-            <h2 style={{ fontFamily: "'Noto Serif',Georgia,serif", fontWeight: 600, fontSize: 22, textAlign: "center", marginBottom: 32 }}>Evaluating your answer</h2>
+          <div style={{ animation: "upscFadeIn 0.2s ease", paddingTop: 64, paddingBottom: 48, maxWidth: 480, margin: "0 auto" }}>
+            <h2 style={{ fontFamily: "'Noto Serif',Georgia,serif", fontWeight: 600, fontSize: 22, textAlign: "center", marginBottom: 10 }}>Evaluating your answer</h2>
 
-            {/* Steps */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 32 }}>
+            {/* Progress bar */}
+            <div style={{ height: 4, borderRadius: 2, background: "var(--c-border)", overflow: "hidden", marginBottom: 8 }}>
+              <div style={{ height: "100%", borderRadius: 2, background: "var(--c-accent)", width: `${Math.min(((loadingStep + 1) / 4) * 100, 100)}%`, transition: "width 0.6s ease" }} />
+            </div>
+
+            {/* Current step text */}
+            <p style={{ textAlign: "center", fontSize: 13, color: "var(--c-text-secondary)", marginBottom: 32, minHeight: 20 }}>
               {([
                 entryTab === "pdf" ? "Extracting text from PDF..." : "Processing your answer...",
                 "Identifying question-answer pairs...",
                 "Evaluating content and structure...",
                 "Calibrating scores...",
-              ]).map((step, i) => {
-                const done = loadingStep > i, active = loadingStep === i;
+                "Complete!",
+              ])[Math.max(0, Math.min(loadingStep + 1, 4))]}
+            </p>
+
+            {/* Alternating Did You Know / Quiz card */}
+            {loadingSeqPos % 2 === 0 ? (
+              /* ── DID YOU KNOW card ── */
+              <div key={`fact-${loadingSeqPos}`} style={{ animation: "upscFadeIn 0.3s ease", border: "1px solid var(--c-border)", borderRadius: 10, background: "var(--c-surface)", padding: "20px 22px", marginBottom: 16 }}>
+                <p style={{ fontSize: 11, fontWeight: 700, color: "var(--c-accent)", textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: "'JetBrains Mono',monospace", marginBottom: 14 }}>Did You Know</p>
+                <p style={{ fontFamily: "'Noto Serif',Georgia,serif", fontSize: 24, fontWeight: 700, color: "var(--c-text)", lineHeight: 1.2, marginBottom: 10 }}>
+                  {DID_YOU_KNOW[Math.floor(loadingSeqPos / 2) % DID_YOU_KNOW.length].big}
+                </p>
+                <p style={{ fontSize: 13, color: "var(--c-text-secondary)", lineHeight: 1.7, marginBottom: 14 }}>
+                  {DID_YOU_KNOW[Math.floor(loadingSeqPos / 2) % DID_YOU_KNOW.length].fact}
+                </p>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {DID_YOU_KNOW[Math.floor(loadingSeqPos / 2) % DID_YOU_KNOW.length].tags.map((tag, i) => (
+                    <span key={i} style={{ padding: "2px 8px", borderRadius: 4, background: "var(--c-accent-bg)", color: "var(--c-accent)", fontSize: 11, fontWeight: 600, fontFamily: "'JetBrains Mono',monospace" }}>{tag}</span>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              /* ── QUIZ card ── */
+              (() => {
+                const qIdx = Math.floor((loadingSeqPos - 1) / 2) % QUIZ_QUESTIONS.length;
+                const q = QUIZ_QUESTIONS[qIdx];
                 return (
-                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, opacity: done || active ? 1 : 0.38, transition: "opacity 0.3s ease" }}>
-                    <div style={{ width: 24, height: 24, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", border: `1px solid ${done ? "var(--c-green)" : active ? "var(--c-accent)" : "var(--c-border)"}`, background: done ? "var(--c-green-bg)" : active ? "var(--c-accent-bg)" : "transparent", color: done ? "var(--c-green)" : active ? "var(--c-accent)" : "var(--c-text-tertiary)" }}>
-                      {done ? <IconCheck /> : active ? <IconSpinner /> : <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11 }}>{i + 1}</span>}
+                  <div key={`quiz-${loadingSeqPos}`} style={{ animation: "upscFadeIn 0.3s ease", border: "1px solid var(--c-border)", borderRadius: 10, background: "var(--c-surface)", padding: "20px 22px", marginBottom: 16 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                      <p style={{ fontSize: 11, fontWeight: 700, color: "var(--c-amber)", textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: "'JetBrains Mono',monospace" }}>Quick Quiz</p>
+                      {quizScore.total > 0 && (
+                        <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: "var(--c-text-tertiary)" }}>{quizScore.correct}/{quizScore.total} correct</span>
+                      )}
                     </div>
-                    <span style={{ fontSize: 13, fontWeight: active ? 500 : 400, color: active ? "var(--c-text)" : "var(--c-text-secondary)" }}>{step}</span>
+                    <p style={{ fontSize: 14, fontWeight: 500, color: "var(--c-text)", lineHeight: 1.6, marginBottom: 14 }}>{q.question}</p>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {q.options.map((opt, i) => {
+                        let bg = "var(--c-surface-hover)", borderColor = "var(--c-border)", color = "var(--c-text)";
+                        if (quizAnswered !== null) {
+                          if (i === q.correct) { bg = "var(--c-green-bg)"; borderColor = "var(--c-green)"; color = "var(--c-green)"; }
+                          else if (i === quizAnswered) { bg = "var(--c-red-bg)"; borderColor = "var(--c-red)"; color = "var(--c-red)"; }
+                        }
+                        return (
+                          <button
+                            key={i}
+                            className="quiz-opt"
+                            disabled={quizAnswered !== null}
+                            onClick={() => {
+                              if (quizAnswered !== null) return;
+                              setQuizAnswered(i);
+                              setQuizScore(s => ({ correct: s.correct + (i === q.correct ? 1 : 0), total: s.total + 1 }));
+                            }}
+                            style={{ background: bg, border: `1px solid ${borderColor}`, color }}
+                          >
+                            {opt}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {quizAnswered !== null && (
+                      <div style={{ marginTop: 14, padding: "10px 14px", borderRadius: 6, background: "var(--c-accent-bg)", borderLeft: "3px solid var(--c-accent)", animation: "upscSlideIn 0.15s ease" }}>
+                        <p style={{ fontSize: 12, color: "var(--c-text-secondary)", lineHeight: 1.65 }}>{q.explanation}</p>
+                      </div>
+                    )}
                   </div>
                 );
-              })}
-            </div>
+              })()
+            )}
 
-            {/* Tip card */}
-            <div style={{ borderLeft: "3px solid var(--c-accent)", padding: "14px 16px", background: "var(--c-surface)", borderRadius: "0 8px 8px 0", border: "1px solid var(--c-border)", borderLeftColor: "var(--c-accent)", marginBottom: 20 }}>
-              <p style={{ fontSize: 11, fontWeight: 700, color: "var(--c-accent)", textTransform: "uppercase", letterSpacing: "0.07em", fontFamily: "'JetBrains Mono',monospace", marginBottom: 8 }}>Evaluator Tip</p>
-              <p style={{ fontSize: 13, color: "var(--c-text-secondary)", lineHeight: 1.7 }}>{TIPS[tipIdx]}</p>
-            </div>
-
-            {/* Current affairs */}
-            <div style={{ border: "1px solid var(--c-border)", borderRadius: 8, background: "var(--c-surface)", overflow: "hidden" }}>
-              <div style={{ padding: "9px 16px", borderBottom: "1px solid var(--c-border)", background: "var(--c-surface-hover)" }}>
-                <p style={{ fontSize: 11, fontWeight: 700, color: "var(--c-text-secondary)", textTransform: "uppercase", letterSpacing: "0.07em", fontFamily: "'JetBrains Mono',monospace" }}>Current Affairs</p>
-              </div>
-              {SAMPLE_CURRENT_AFFAIRS.map((item, i) => (
-                <div key={i} style={{ padding: "10px 16px", borderBottom: i < SAMPLE_CURRENT_AFFAIRS.length - 1 ? "1px solid var(--c-border)" : "none", display: "flex", gap: 10, alignItems: "flex-start" }}>
-                  <span style={{ flexShrink: 0, fontFamily: "'JetBrains Mono',monospace", fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 3, background: "var(--c-accent-bg)", color: "var(--c-accent)" }}>{item.tag}</span>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: 13, color: "var(--c-text)", lineHeight: 1.5, marginBottom: 2 }}>{item.title}</p>
-                    <p style={{ fontSize: 11, color: "var(--c-text-tertiary)", fontFamily: "'JetBrains Mono',monospace" }}>{item.source} · {item.time}</p>
-                  </div>
-                </div>
-              ))}
+            {/* Evaluator tip (subtle, below main card) */}
+            <div style={{ padding: "12px 16px", borderRadius: 8, border: "1px solid var(--c-border)", background: "var(--c-surface-hover)" }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: "var(--c-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.07em", fontFamily: "'JetBrains Mono',monospace", marginBottom: 5 }}>Evaluator Tip</p>
+              <p style={{ fontSize: 12, color: "var(--c-text-secondary)", lineHeight: 1.65 }}>{TIPS[tipIdx]}</p>
             </div>
           </div>
         )}
