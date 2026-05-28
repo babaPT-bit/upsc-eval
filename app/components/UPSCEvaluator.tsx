@@ -570,10 +570,14 @@ export default function UPSCEvaluator() {
             body: formData,
           });
         } else {
-          response = await fetch("https://PranshuT-upsc-answer-evaluator.hf.space/evaluate-text", {
+          // Temporary: wrap text as a file for the existing /evaluate endpoint
+          const blob = new Blob([submittedText], { type: "text/plain" });
+          const textFile = new File([blob], "answer.txt", { type: "text/plain" });
+          const formData = new FormData();
+          formData.append("file", textFile);
+          response = await fetch("https://PranshuT-upsc-answer-evaluator.hf.space/evaluate", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: submittedText, question: submittedQuestion }),
+            body: formData,
           });
         }
 
