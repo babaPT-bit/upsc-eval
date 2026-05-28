@@ -309,6 +309,7 @@ export default function UPSCEvaluator() {
   const [tipIdx, setTipIdx] = useState(0);
   const [tipFade, setTipFade] = useState(true);
   const [annotating, setAnnotating] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -323,7 +324,7 @@ export default function UPSCEvaluator() {
   const loadingSteps = ["Extracting text from PDF", "Identifying question-answer blocks", "Evaluating against UPSC standards", "Generating improvement suggestions"];
 
   const handleFile = (f: File | null | undefined) => {
-    if (f && f.type === "application/pdf") { setFile(f); setUploadedFile(f); }
+    if (f && f.type === "application/pdf") { setFile(f); setUploadedFile(f); setSelectedFile(f); }
   };
 
   const handleUpload = async () => {
@@ -450,25 +451,121 @@ export default function UPSCEvaluator() {
 
         {/* ── Upload screen ── */}
         {!loading && !results && (
-          <div style={{ animation: "fadeIn 0.2s ease", paddingTop: 48, paddingBottom: 64 }}>
-            <h1 style={{ fontFamily: "'Noto Serif', Georgia, serif", fontWeight: 700, fontSize: 28, color: "var(--fg)", marginBottom: 10, lineHeight: 1.3 }}>Evaluate your UPSC Mains answers</h1>
-            <p style={{ color: "var(--fg-secondary)", fontSize: 15, marginBottom: 32, lineHeight: 1.6 }}>Upload your answer sheet PDF and receive AI-powered scoring, factual error detection, and UPSC-specific improvement suggestions.</p>
-            <div onClick={() => fileRef.current?.click()} onDragOver={(e) => { e.preventDefault(); setDragActive(true); }} onDragLeave={() => setDragActive(false)} onDrop={(e) => { e.preventDefault(); setDragActive(false); handleFile(e.dataTransfer.files[0]); }}
-              style={{ border: `1.5px dashed ${dragActive ? "var(--accent)" : "var(--border)"}`, borderRadius: 8, padding: "40px 24px", textAlign: "center", cursor: "pointer", background: dragActive ? "var(--accent-bg)" : "var(--surface-raised)", transition: "border-color 0.15s ease, background 0.15s ease", marginBottom: 16 }}>
+          <div style={{ animation: "fadeIn 0.2s ease", paddingTop: 48, paddingBottom: 48 }}>
+
+            {/* Hero */}
+            <div style={{ marginBottom: 32 }}>
+              <p style={{ fontSize: 11, fontWeight: 600, color: "var(--accent)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 12, fontFamily: "'JetBrains Mono', Menlo, monospace" }}>AI-Powered Evaluation</p>
+              <h1 style={{ fontFamily: "'Noto Serif', Georgia, serif", fontWeight: 700, fontSize: 28, color: "var(--fg)", marginBottom: 10, lineHeight: 1.3 }}>Evaluate your UPSC Mains answers</h1>
+              <p style={{ color: "var(--fg-secondary)", fontSize: 15, lineHeight: 1.6 }}>Upload your answer sheet PDF and receive AI-powered scoring, factual error detection, and UPSC-specific improvement suggestions.</p>
+            </div>
+
+            {/* Upload box */}
+            <div
+              onClick={() => !selectedFile && fileRef.current?.click()}
+              onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+              onDragLeave={() => setDragActive(false)}
+              onDrop={(e) => { e.preventDefault(); setDragActive(false); handleFile(e.dataTransfer.files[0]); }}
+              style={{ border: `1.5px ${selectedFile ? "solid" : "dashed"} ${selectedFile ? "var(--green)" : dragActive ? "var(--accent)" : "var(--border)"}`, borderRadius: 8, padding: "36px 32px", textAlign: "center", cursor: selectedFile ? "default" : "pointer", background: dragActive ? "var(--accent-bg)" : "var(--surface-raised)", transition: "border-color 0.15s ease, background 0.15s ease", maxWidth: 560, margin: "0 auto 32px" }}>
               <input ref={fileRef} type="file" accept=".pdf" onChange={(e) => handleFile(e.target.files?.[0])} style={{ display: "none" }} />
-              <div style={{ color: file ? "var(--accent)" : "var(--dim)", marginBottom: 10, display: "flex", justifyContent: "center" }}>{file ? <IconFile /> : <IconUploadCloud />}</div>
-              {file ? (<><p style={{ fontWeight: 500, fontSize: 14, color: "var(--fg)", marginBottom: 4 }}>{file.name}</p><p style={{ fontSize: 13, color: "var(--dim)" }}>{(file.size / 1024 / 1024).toFixed(2)} MB — click to change</p></>) : (<><p style={{ fontWeight: 500, fontSize: 14, color: "var(--fg)", marginBottom: 4 }}>Drop your PDF here</p><p style={{ fontSize: 13, color: "var(--dim)" }}>or click to browse</p></>)}
+              {selectedFile ? (
+                /* STATE B — file selected */
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                  <div style={{ color: darkMode ? "#4F9768" : "#548164", marginBottom: 8 }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                  </div>
+                  <p style={{ fontWeight: 500, fontSize: 14, color: "var(--fg)", marginBottom: 4 }}>{selectedFile.name}</p>
+                  <p style={{ fontSize: 12, color: "var(--dim)", fontFamily: "'JetBrains Mono', Menlo, monospace" }}>
+                    {selectedFile.size >= 1024 * 1024 ? `${(selectedFile.size / 1024 / 1024).toFixed(1)} MB` : `${Math.round(selectedFile.size / 1024)} KB`}
+                  </p>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleUpload(); }}
+                    style={{ background: "var(--accent)", color: "white", padding: "10px 24px", borderRadius: 6, fontSize: 14, fontWeight: 500, border: "none", cursor: "pointer", marginTop: 16 }}>
+                    Start Evaluation
+                  </button>
+                  <p onClick={(e) => { e.stopPropagation(); setSelectedFile(null); }} style={{ fontSize: 12, color: "var(--dim)", cursor: "pointer", textDecoration: "underline", marginTop: 10 }}>
+                    Choose different file
+                  </p>
+                </div>
+              ) : (
+                /* STATE A — no file */
+                <>
+                  <div style={{ color: "var(--dim)", marginBottom: 10, display: "flex", justifyContent: "center" }}><IconUploadCloud /></div>
+                  <p style={{ fontWeight: 500, fontSize: 14, color: "var(--fg)", marginBottom: 4 }}>Drop your PDF here</p>
+                  <p style={{ fontSize: 13, color: "var(--dim)" }}>or click to browse</p>
+                </>
+              )}
             </div>
-            {file && (<button onClick={handleUpload} style={{ width: "100%", padding: "10px", borderRadius: 6, marginBottom: 32, border: "1px solid var(--accent)", background: "var(--accent-bg)", color: "var(--accent)", fontSize: 14, fontWeight: 600, transition: "background 0.15s ease, color 0.15s ease" }} onMouseEnter={(e) => { e.currentTarget.style.background = "var(--accent)"; e.currentTarget.style.color = "var(--bg)"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "var(--accent-bg)"; e.currentTarget.style.color = "var(--accent)"; }}>Evaluate answers</button>)}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              {FEATURES.map((f, i) => (<div key={i} style={{ padding: 16, border: "1px solid var(--border)", borderRadius: 8, background: "var(--surface)", transition: "border-color 0.15s ease" }} onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--border-hover)")} onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border)")}><div style={{ color: "var(--accent)", marginBottom: 10 }}>{f.icon}</div><p style={{ fontWeight: 500, fontSize: 13, color: "var(--fg)", marginBottom: 4 }}>{f.title}</p><p style={{ fontSize: 12, color: "var(--dim)", lineHeight: 1.5 }}>{f.desc}</p></div>))}
+
+            {/* How it works */}
+            <div style={{ marginTop: 32, marginBottom: 0, display: "flex", justifyContent: "center", alignItems: "center", gap: 0 }}>
+              {/* Step 1 */}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, width: 140 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 8, background: "var(--surface-raised)", color: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 16 12 12 8 16" /><line x1="12" y1="12" x2="12" y2="21" /><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" /></svg>
+                </div>
+                <span style={{ fontSize: 12, fontWeight: 500, color: "var(--fg-secondary)" }}>Upload PDF</span>
+              </div>
+              {/* Arrow */}
+              <div style={{ margin: "0 8px", marginBottom: 18 }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--border)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+              </div>
+              {/* Step 2 */}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, width: 140 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 8, background: "var(--surface-raised)", color: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" /><rect x="9" y="9" width="6" height="6" /><line x1="9" y1="1" x2="9" y2="4" /><line x1="15" y1="1" x2="15" y2="4" /><line x1="9" y1="20" x2="9" y2="23" /><line x1="15" y1="20" x2="15" y2="23" /><line x1="20" y1="9" x2="23" y2="9" /><line x1="20" y1="14" x2="23" y2="14" /><line x1="1" y1="9" x2="4" y2="9" /><line x1="1" y1="14" x2="4" y2="14" /></svg>
+                </div>
+                <span style={{ fontSize: 12, fontWeight: 500, color: "var(--fg-secondary)" }}>AI evaluates</span>
+              </div>
+              {/* Arrow */}
+              <div style={{ margin: "0 8px", marginBottom: 18 }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--border)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+              </div>
+              {/* Step 3 */}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, width: 140 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 8, background: "var(--surface-raised)", color: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></svg>
+                </div>
+                <span style={{ fontSize: 12, fontWeight: 500, color: "var(--fg-secondary)" }}>Get feedback</span>
+              </div>
             </div>
+
+            {/* Feature cards */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 32 }}>
+              {FEATURES.map((f, i) => {
+                const chipStyles = [
+                  { background: "var(--blue-bg)", color: "var(--blue)" },
+                  { background: "var(--green-bg)", color: "var(--green)" },
+                  { background: "var(--red-bg)", color: "var(--red)" },
+                  { background: "var(--orange-bg)", color: "var(--orange)" },
+                ];
+                const chip = chipStyles[i];
+                return (
+                  <div key={i}
+                    style={{ padding: 16, border: "1px solid var(--border)", borderRadius: 8, background: "var(--surface)", transition: "all 0.15s ease" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--border-hover)"; e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.transition = "all 0.15s ease"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.transform = "translateY(0)"; }}>
+                    <div style={{ width: 32, height: 32, borderRadius: 6, background: chip.background, color: chip.color, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}>{f.icon}</div>
+                    <p style={{ fontWeight: 500, fontSize: 13, color: "var(--fg)", marginBottom: 4 }}>{f.title}</p>
+                    <p style={{ fontSize: 12, color: "var(--dim)", lineHeight: 1.5 }}>{f.desc}</p>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* GS paper coverage tags */}
+            <div style={{ marginTop: 24, display: "flex", justifyContent: "center", gap: 6, flexWrap: "wrap" }}>
+              {["GS Paper 1", "GS Paper 2", "GS Paper 3", "GS Paper 4", "Essay"].map((tag) => (
+                <span key={tag} style={{ padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 500, border: "1px solid var(--border)", color: "var(--dim)", background: "var(--surface)" }}>{tag}</span>
+              ))}
+            </div>
+
           </div>
         )}
 
         {/* ── Loading screen ── */}
         {loading && (
-          <div style={{ paddingTop: 72, paddingBottom: 64, maxWidth: 440, margin: "0 auto", animation: "fadeIn 0.2s ease" }}>
+          <div style={{ paddingTop: 64, paddingBottom: 48, maxWidth: 440, margin: "0 auto", animation: "fadeIn 0.2s ease" }}>
             <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}><Spinner /></div>
             <h2 style={{ fontFamily: "'Noto Serif', Georgia, serif", fontWeight: 600, fontSize: 20, textAlign: "center", marginBottom: 24, color: "var(--fg)" }}>Processing your answers</h2>
             <div style={{ height: 3, borderRadius: 2, background: "var(--border)", marginBottom: 32, overflow: "hidden" }}>
@@ -488,7 +585,7 @@ export default function UPSCEvaluator() {
               })}
             </div>
             {/* Rotating tips */}
-            <div style={{ border: "1px solid var(--border)", borderRadius: 8, background: "var(--surface-raised)", padding: "16px 18px" }}>
+            <div style={{ border: "1px solid var(--border)", borderRadius: 8, background: "var(--surface-raised)", padding: "16px 18px", marginBottom: 24 }}>
               <div style={{ opacity: tipFade ? 1 : 0, transition: "opacity 0.3s ease" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
                   <span style={{ color: "var(--accent)", display: "flex", alignItems: "center" }}><IconBulb /></span>
