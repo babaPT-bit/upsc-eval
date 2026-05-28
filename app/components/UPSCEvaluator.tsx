@@ -56,7 +56,8 @@ const TIPS = [
   "A way forward section at the end is expected for most Discuss/Examine questions. Don't skip it.",
 ];
 
-const MOCK_RESULT = {
+// Fallback mock result — used when API is unavailable or returns an error
+const MOCK_RESULT: EvalResult = {
   overallScore: 5.4,
   maxScore: 10,
   percentage: 54,
@@ -118,6 +119,87 @@ interface EvalResult {
 interface Attempt { num: number; percentage: number; result: EvalResult; }
 type DimFeedback = Record<string, "agree" | "disagree">;
 type ErrFeedback = Record<number, "correct" | "wrong">;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   API RESPONSE MAPPER
+═══════════════════════════════════════════════════════════════════════════ */
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapApiResponse(apiData: any): EvalResult {
+  const answer = apiData.answers?.[0];
+  if (!answer) throw new Error("No answers in response");
+
+  const evaluation = answer.evaluation || {};
+  const dimensions: Dimension[] = [];
+
+  const dimMap: Record<string, { weight: string }> = {
+    question_comprehension: { weight: "20%" },
+    factual_accuracy:       { weight: "20%" },
+    syllabus_alignment:     { weight: "15%" },
+    current_affairs:        { weight: "10%" },
+    answer_structure:       { weight: "15%" },
+    point_density:          { weight: "15%" },
+    presentation:           { weight: "5%"  },
+  };
+
+  for (const [key, config] of Object.entries(dimMap)) {
+    const dim = evaluation[key];
+    if (dim) {
+      dimensions.push({
+        name: key.split("_").map((w: string) => w[0].toUpperCase() + w.slice(1)).join(" "),
+        weight: config.weight,
+        score: dim.score ?? 0,
+        max: 10,
+        comment: dim.comment ?? "",
+      });
+    }
+  }
+
+  // V1 fallback
+  if (dimensions.length === 0 && answer.dimensions) {
+    for (const dim of answer.dimensions) {
+      dimensions.push({
+        name: dim.name,
+        weight: "",
+        score: dim.score,
+        max: dim.max || 10,
+        comment: dim.comment || "",
+      });
+    }
+  }
+
+  const factualErrors: FactualError[] = [];
+  const rawErrors = evaluation.factual_accuracy?.errors || answer.factualErrors || [];
+  for (const err of rawErrors) {
+    factualErrors.push({
+      severity: (err.severity || "moderate") as "critical" | "moderate" | "minor",
+      errorText: err.error_text || err.text || "",
+      whatIsWrong: err.what_is_wrong || "",
+      correction: err.correction || "",
+    });
+  }
+
+  const improvements: string[] = evaluation.top_3_improvements || answer.improvements || [];
+  const summary = apiData.summary || {};
+
+  return {
+    overallScore: answer.overallScore ?? evaluation.overall_score ?? 0,
+    maxScore: answer.maxScore ?? 10,
+    percentage: evaluation.overall_percentage ?? summary.percentage ?? 0,
+    directive: ((answer.directive?.directive || "") as string).replace(/_/g, " ").toUpperCase(),
+    syllabusTag: answer.syllabus ? `${answer.syllabus.paper} — ${answer.syllabus.topic}` : "",
+    wordCount: answer.metrics?.word_count ?? 0,
+    examinerVerdict: evaluation.examiner_verdict || "",
+    dimensions,
+    factualErrors,
+    improvements,
+    summary: {
+      strengths: summary.strengths || [],
+      weaknesses: summary.weaknesses || [],
+      topRecommendation: summary.topRecommendation || "",
+    },
+  };
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════
    SVG ICONS
@@ -413,6 +495,10 @@ export default function UPSCEvaluator() {
   const [dragActive, setDragActive] = useState(false);
   const pdfRef = useRef<HTMLInputElement>(null);
 
+  /* ── submitted content (persists across screen changes) ── */
+  const [submittedText, setSubmittedText] = useState("");
+  const [submittedQuestion, setSubmittedQuestion] = useState("");
+
   /* ── loading ── */
   const [loadingStep, setLoadingStep] = useState(-1);
   const [tipIdx, setTipIdx] = useState(0);
@@ -429,24 +515,81 @@ export default function UPSCEvaluator() {
   const [fbNote, setFbNote] = useState("");
   const [shareMsg, setShareMsg] = useState("");
 
-  /* ── loading animation ── */
+  /* ── loading: real API with mock fallback ── */
   useEffect(() => {
     if (screen !== "loading") return;
+    let cancelled = false;
+
     const delays = [400, 1200, 2400, 3800];
     const timers = delays.map((d, i) => window.setTimeout(() => setLoadingStep(i), d));
-    const done = window.setTimeout(() => {
-      const q = entryTab === "pyq" ? (selectedPYQ?.q ?? "") : writeQuestion;
-      const r: EvalResult = { ...MOCK_RESULT, summary: { ...MOCK_RESULT.summary } };
-      // We embed the question we used into the result for the text tab
-      const fullResult = { ...r, _question: q } as EvalResult;
-      setResult(fullResult);
-      setAttempts(prev => [...prev, { num: prev.length + 1, percentage: r.percentage, result: fullResult }]);
-      setDimFb({});
-      setErrFb({});
-      setScreen("results");
-      setResultTab("scores");
-    }, 5500);
-    return () => { timers.forEach(window.clearTimeout); window.clearTimeout(done); };
+
+    const doFetch = async () => {
+      try {
+        let response: Response;
+
+        if (entryTab === "pdf" && pdfFile) {
+          const formData = new FormData();
+          formData.append("file", pdfFile);
+          response = await fetch("https://PranshuT-upsc-answer-evaluator.hf.space/evaluate", {
+            method: "POST",
+            body: formData,
+          });
+        } else {
+          response = await fetch("https://PranshuT-upsc-answer-evaluator.hf.space/evaluate-text", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: submittedText, question: submittedQuestion }),
+          });
+        }
+
+        if (cancelled) return;
+
+        if (!response.ok) {
+          // 404 on evaluate-text means endpoint not live yet — use mock
+          if (response.status === 404 && entryTab !== "pdf") {
+            console.warn("evaluate-text not available yet — showing sample result");
+          } else {
+            console.warn("API returned", response.status, "— using mock result");
+          }
+          const r: EvalResult = { ...MOCK_RESULT, summary: { ...MOCK_RESULT.summary } };
+          setResult(r);
+          setAttempts(prev => [...prev, { num: prev.length + 1, percentage: r.percentage, result: r }]);
+        } else {
+          const apiData = await response.json();
+          const mapped = mapApiResponse(apiData);
+
+          if (entryTab === "pdf" && apiData.answers?.[0]?.extractedText) {
+            setSubmittedText(apiData.answers[0].extractedText);
+          }
+
+          setResult(mapped);
+          setAttempts(prev => [...prev, { num: prev.length + 1, percentage: mapped.percentage, result: mapped }]);
+        }
+      } catch (err) {
+        if (cancelled) return;
+        console.error("Evaluation failed:", err);
+        const r: EvalResult = { ...MOCK_RESULT, summary: { ...MOCK_RESULT.summary } };
+        setResult(r);
+        setAttempts(prev => [...prev, { num: prev.length + 1, percentage: r.percentage, result: r }]);
+      }
+
+      if (!cancelled) {
+        setLoadingStep(4);
+        window.setTimeout(() => {
+          setDimFb({});
+          setErrFb({});
+          setScreen("results");
+          setResultTab("scores");
+        }, 600);
+      }
+    };
+
+    doFetch();
+
+    return () => {
+      cancelled = true;
+      timers.forEach(window.clearTimeout);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [screen]);
 
@@ -465,7 +608,20 @@ export default function UPSCEvaluator() {
 
   const pctColor = (p: number) => p >= 75 ? "#448361" : p >= 50 ? "#C29243" : "#D44C47";
 
-  const doEvaluate = () => { setLoadingStep(-1); setScreen("loading"); };
+  const doEvaluate = () => {
+    if (entryTab === "pyq") {
+      setSubmittedQuestion(selectedPYQ?.q ?? "");
+      setSubmittedText(editorText);
+    } else if (entryTab === "write") {
+      setSubmittedQuestion(writeQuestion);
+      setSubmittedText(editorText);
+    } else {
+      setSubmittedQuestion("");
+      setSubmittedText(""); // Will be filled by API response
+    }
+    setLoadingStep(-1);
+    setScreen("loading");
+  };
 
   const doRetryWrite = () => {
     const q = entryTab === "pyq" ? (selectedPYQ?.q ?? "") : writeQuestion;
@@ -882,7 +1038,7 @@ export default function UPSCEvaluator() {
               <div style={{ animation: "upscSlideIn 0.15s ease", padding: 16, borderRadius: 8, background: "var(--c-surface)", border: "1px solid var(--c-border)" }}>
                 <p style={{ fontSize: 11, fontWeight: 600, color: "var(--c-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 12, fontFamily: "'JetBrains Mono',monospace" }}>Submitted Text</p>
                 <p style={{ fontFamily: "'JetBrains Mono',Menlo,monospace", fontSize: 12, lineHeight: 1.85, color: "var(--c-text-secondary)", whiteSpace: "pre-wrap" }}>
-                  {entryTab === "pdf" ? "[Text extracted from PDF will appear here after API integration]" : (editorText || "[No text submitted]")}
+                  {submittedText || (result as EvalResult & { extractedText?: string })?.extractedText || "[No text available]"}
                 </p>
               </div>
             )}
