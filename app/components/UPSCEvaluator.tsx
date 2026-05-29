@@ -37,6 +37,14 @@ const SAMPLE_PYQ: Record<string, Record<string, Array<{ id: string; q: string; m
   },
 };
 
+// Flat list of all PYQ questions for the question picker dropdown
+const FLAT_PYQ: Array<{ id: string; q: string; marks: number; paper: string }> =
+  Object.entries(SAMPLE_PYQ).flatMap(([paper, years]) =>
+    Object.entries(years).flatMap(([, questions]) =>
+      questions.map(q => ({ ...q, paper }))
+    )
+  );
+
 const SAMPLE_CURRENT_AFFAIRS = [
   { title: "SC ruling on Governor's assent powers — implications for federalism", source: "The Hindu", time: "3 hours ago", tag: "GS2" },
   { title: "NITI Aayog releases SDG India Index 2026 — Kerala tops, Bihar last", source: "PIB", time: "Today", tag: "GS3" },
@@ -504,17 +512,18 @@ export default function UPSCEvaluator() {
   const [screen, setScreen] = useState<Screen>("entry");
   const [entryTab, setEntryTab] = useState<EntryTab>("pyq");
   const [resultTab, setResultTab] = useState<ResultTab>("scores");
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
 
   /* ── V3 entry mode ── */
   const [entryMode, setEntryMode] = useState<"upload" | "practice" | null>(null);
-  const [practiceSource, setPracticeSource] = useState<"pyq" | "write">("pyq");
   const [sampleExpanded, setSampleExpanded] = useState(false);
+  const [showQuestionPicker, setShowQuestionPicker] = useState(false);
 
   /* ── PYQ ── */
-  const [pyqPaper, setPyqPaper] = useState("GS1");
-  const [pyqYear, setPyqYear] = useState("2024");
   const [selectedPYQ, setSelectedPYQ] = useState<PYQItem | null>(null);
+
+  /* ── results actions ── */
+  const [showSuggestPrompt, setShowSuggestPrompt] = useState(false);
 
   /* ── editor ── */
   const [editorHtml, setEditorHtml] = useState("");
@@ -655,18 +664,13 @@ export default function UPSCEvaluator() {
   /* ── helpers ── */
   const canEvaluate =
     entryMode === "upload" ? !!pdfFile :
-    entryMode === "practice" && practiceSource === "pyq" ? (!!selectedPYQ && editorText.trim().length > 20) :
-    entryMode === "practice" && practiceSource === "write" ? (writeQuestion.trim().length > 3 && editorText.trim().length > 20) :
+    entryMode === "practice" ? (writeQuestion.trim().length > 3 && editorText.trim().length > 20) :
     false;
 
   const pctColor = (p: number) => p >= 75 ? "#448361" : p >= 50 ? "#C29243" : "#D44C47";
 
   const doEvaluate = () => {
-    if (entryMode === "practice" && practiceSource === "pyq") {
-      setSubmittedQuestion(selectedPYQ?.q ?? "");
-      setSubmittedText(editorText);
-      setEntryTab("pyq");
-    } else if (entryMode === "practice" && practiceSource === "write") {
+    if (entryMode === "practice") {
       setSubmittedQuestion(writeQuestion);
       setSubmittedText(editorText);
       setEntryTab("write");
@@ -683,11 +687,12 @@ export default function UPSCEvaluator() {
   };
 
   const doRetryWrite = () => {
-    const q = entryTab === "pyq" ? (selectedPYQ?.q ?? "") : writeQuestion;
+    const q = submittedQuestion || writeQuestion;
     setWriteQuestion(q);
     setEditorKey(k => k + 1);
     setEditorHtml(""); setEditorText("");
-    setEntryMode("practice"); setPracticeSource("write"); setEntryTab("write");
+    setEntryMode("practice"); setEntryTab("write");
+    setShowSuggestPrompt(false);
     setScreen("entry");
   };
 
@@ -871,72 +876,52 @@ export default function UPSCEvaluator() {
             {entryMode === "practice" && (
               <div style={{ animation: "upscSlideIn 0.15s ease", marginTop: 16, padding: "20px", borderRadius: 10, border: "1px solid var(--c-border)", background: "var(--c-surface)" }}>
 
-                {/* Sub-toggle */}
-                <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-                  <button className={`v3-chip${practiceSource === "pyq" ? " on" : ""}`} onClick={() => setPracticeSource("pyq")}>
-                    <span style={{ display: "flex", alignItems: "center", gap: 5 }}><IconBook size={12} /> Pick from PYQ Bank</span>
+                {/* Question input + picker */}
+                <div style={{ position: "relative", marginBottom: 14 }}>
+                  <input type="text" value={writeQuestion} onChange={e => setWriteQuestion(e.target.value)}
+                    placeholder="Type your question or pick one below..."
+                    style={{ width: "100%", padding: "10px 14px", borderRadius: 6, border: "1px solid var(--c-border)", background: "var(--c-surface-hover)", color: "var(--c-text)", fontSize: 14, outline: "none", fontFamily: "inherit", transition: "border-color 0.15s" }}
+                    onFocus={e => e.target.style.borderColor = "var(--c-accent)"}
+                    onBlur={e => e.target.style.borderColor = "var(--c-border)"} />
+
+                  {/* Browse link */}
+                  <button
+                    onClick={() => setShowQuestionPicker(p => !p)}
+                    style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 8, background: "none", border: "none", fontSize: 12, color: "var(--c-text-tertiary)", cursor: "pointer", padding: 0 }}
+                    onMouseEnter={e => e.currentTarget.style.color = "var(--c-text-secondary)"}
+                    onMouseLeave={e => e.currentTarget.style.color = "var(--c-text-tertiary)"}
+                  >
+                    Browse sample questions
+                    <span style={{ display: "inline-flex", transform: showQuestionPicker ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.15s" }}>
+                      <IconChevronDown size={11} />
+                    </span>
                   </button>
-                  <button className={`v3-chip${practiceSource === "write" ? " on" : ""}`} onClick={() => setPracticeSource("write")}>
-                    <span style={{ display: "flex", alignItems: "center", gap: 5 }}><IconPen size={12} /> Write My Own</span>
-                  </button>
+
+                  {/* Dropdown */}
+                  {showQuestionPicker && (
+                    <>
+                      <div style={{ position: "fixed", inset: 0, zIndex: 10 }} onClick={() => setShowQuestionPicker(false)} />
+                      <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 20, border: "1px solid var(--c-border)", background: "var(--c-surface)", borderRadius: 8, maxHeight: 300, overflowY: "auto", boxShadow: "0 4px 12px rgba(0,0,0,0.12)" }}>
+                        {FLAT_PYQ.map((item, i) => (
+                          <button
+                            key={item.id}
+                            onClick={() => { setWriteQuestion(item.q); setSelectedPYQ({ id: item.id, q: item.q, marks: item.marks }); setShowQuestionPicker(false); }}
+                            style={{ width: "100%", textAlign: "left", padding: "10px 14px", background: "transparent", border: "none", borderBottom: i < FLAT_PYQ.length - 1 ? "1px solid var(--c-border)" : "none", cursor: "pointer", display: "flex", gap: 10, alignItems: "flex-start" }}
+                            onMouseEnter={e => e.currentTarget.style.background = "var(--c-surface-hover)"}
+                            onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                          >
+                            <span style={{ flexShrink: 0, fontFamily: "'JetBrains Mono',monospace", fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 3, background: "var(--c-accent-bg)", color: "var(--c-accent)", marginTop: 1 }}>{item.paper}</span>
+                            <span style={{ fontSize: 13, lineHeight: 1.5, color: "var(--c-text)", flex: 1 }}>{item.q}</span>
+                            <span style={{ flexShrink: 0, fontFamily: "'JetBrains Mono',monospace", fontSize: 10, fontWeight: 600, padding: "2px 6px", borderRadius: 3, background: "var(--c-surface-hover)", border: "1px solid var(--c-border)", color: "var(--c-text-secondary)", marginTop: 1 }}>{item.marks}m</span>
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
 
-                {/* PYQ source */}
-                {practiceSource === "pyq" && (
-                  <div style={{ animation: "upscSlideIn 0.15s ease" }}>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16, alignItems: "center" }}>
-                      <span style={{ fontSize: 12, color: "var(--c-text-tertiary)", marginRight: 2 }}>Paper:</span>
-                      {["GS1","GS2","GS3","GS4"].map(p => (
-                        <button key={p} className={`v3-chip${pyqPaper === p ? " on" : ""}`} onClick={() => { setPyqPaper(p); setSelectedPYQ(null); }}>{p}</button>
-                      ))}
-                      <div style={{ width: 1, height: 16, background: "var(--c-border)", margin: "0 4px" }} />
-                      <span style={{ fontSize: 12, color: "var(--c-text-tertiary)", marginRight: 2 }}>Year:</span>
-                      {["2024","2023","2022"].map(y => {
-                        const has = !!(SAMPLE_PYQ[pyqPaper]?.[y]);
-                        return (
-                          <button key={y} className={`v3-chip${pyqYear === y ? " on" : ""}`}
-                            onClick={() => { if (has) { setPyqYear(y); setSelectedPYQ(null); } }}
-                            style={{ opacity: has ? 1 : 0.4, cursor: has ? "pointer" : "default" }}>{y}</button>
-                        );
-                      })}
-                    </div>
-
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
-                      {!(SAMPLE_PYQ[pyqPaper]?.[pyqYear]?.length) ? (
-                        <p style={{ color: "var(--c-text-tertiary)", fontSize: 13, padding: "16px 0" }}>No questions available for this combination.</p>
-                      ) : (SAMPLE_PYQ[pyqPaper]?.[pyqYear] ?? []).map(item => (
-                        <button key={item.id} onClick={() => setSelectedPYQ(item)}
-                          style={{ textAlign: "left", padding: "12px 14px", borderRadius: 8, border: `1px solid ${selectedPYQ?.id === item.id ? "var(--c-accent)" : "var(--c-border)"}`, background: selectedPYQ?.id === item.id ? "var(--c-accent-bg)" : "var(--c-surface-hover)", cursor: "pointer", transition: "all 0.12s", display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}
-                          onMouseEnter={e => { if (selectedPYQ?.id !== item.id) e.currentTarget.style.borderColor = "var(--c-text-tertiary)"; }}
-                          onMouseLeave={e => { if (selectedPYQ?.id !== item.id) e.currentTarget.style.borderColor = "var(--c-border)"; }}>
-                          <span style={{ fontSize: 13, lineHeight: 1.6, color: "var(--c-text)", flex: 1 }}>{item.q}</span>
-                          <span style={{ flexShrink: 0, fontFamily: "'JetBrains Mono',monospace", fontSize: 11, fontWeight: 600, padding: "2px 7px", borderRadius: 4, background: "var(--c-surface)", border: "1px solid var(--c-border)", color: "var(--c-text-secondary)" }}>{item.marks}m</span>
-                        </button>
-                      ))}
-                    </div>
-
-                    {selectedPYQ && (
-                      <div style={{ animation: "upscSlideIn 0.15s ease" }}>
-                        <div style={{ borderLeft: "3px solid var(--c-accent)", padding: "12px 16px", background: "var(--c-accent-bg)", borderRadius: "0 6px 6px 0", marginBottom: 14 }}>
-                          <p style={{ fontFamily: "'Noto Serif',Georgia,serif", fontSize: 14, lineHeight: 1.75, color: "var(--c-text)" }}>{selectedPYQ.q}</p>
-                        </div>
-                        <NotionEditor key={`pyq-${editorKey}`} onChange={(h, t) => { setEditorHtml(h); setEditorText(t); }} placeholder="Write your answer here..." />
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Write own source */}
-                {practiceSource === "write" && (
-                  <div style={{ animation: "upscSlideIn 0.15s ease" }}>
-                    <input type="text" value={writeQuestion} onChange={e => setWriteQuestion(e.target.value)}
-                      placeholder='e.g. "Discuss the role of civil services in a democracy."'
-                      style={{ width: "100%", padding: "10px 14px", borderRadius: 6, border: "1px solid var(--c-border)", background: "var(--c-surface-hover)", color: "var(--c-text)", fontSize: 14, marginBottom: 14, outline: "none", fontFamily: "inherit", transition: "border-color 0.15s" }}
-                      onFocus={e => e.target.style.borderColor = "var(--c-accent)"}
-                      onBlur={e => e.target.style.borderColor = "var(--c-border)"} />
-                    <NotionEditor key={`write-${editorKey}`} onChange={(h, t) => { setEditorHtml(h); setEditorText(t); }} placeholder="Write your answer here..." />
-                  </div>
-                )}
+                {/* Editor — always visible */}
+                <NotionEditor key={`practice-${editorKey}`} onChange={(h, t) => { setEditorHtml(h); setEditorText(t); }} placeholder="Write your answer here..." />
               </div>
             )}
 
@@ -1020,28 +1005,39 @@ export default function UPSCEvaluator() {
         ════════════════════════════════════════════════════════════════ */}
         {screen === "loading" && (
           <div style={{ animation: "upscFadeIn 0.2s ease", paddingTop: 64, paddingBottom: 48, maxWidth: 480, margin: "0 auto" }}>
-            <h2 style={{ fontFamily: "'Noto Serif',Georgia,serif", fontWeight: 600, fontSize: 22, textAlign: "center", marginBottom: 10 }}>Evaluating your answer</h2>
+            <h2 style={{ fontFamily: "'Noto Serif',Georgia,serif", fontWeight: 600, fontSize: 22, textAlign: "center", marginBottom: 32 }}>Evaluating your answer</h2>
 
-            {/* Progress bar */}
-            <div style={{ height: 4, borderRadius: 2, background: "var(--c-border)", overflow: "hidden", marginBottom: 8 }}>
-              <div style={{ height: "100%", borderRadius: 2, background: "var(--c-accent)", width: `${Math.min(((loadingStep + 1) / 4) * 100, 100)}%`, transition: "width 0.6s ease" }} />
-            </div>
-
-            {/* Current step text */}
-            <p style={{ textAlign: "center", fontSize: 13, color: "var(--c-text-secondary)", marginBottom: 32, minHeight: 20 }}>
+            {/* Step checklist */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 28 }}>
               {([
                 entryTab === "pdf" ? "Extracting text from PDF..." : "Processing your answer...",
                 "Identifying question-answer pairs...",
                 "Evaluating content and structure...",
                 "Calibrating scores...",
-                "Complete!",
-              ])[Math.max(0, Math.min(loadingStep + 1, 4))]}
-            </p>
+              ]).map((step, i) => {
+                const done = loadingStep > i;
+                const active = loadingStep === i;
+                return (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, opacity: done || active ? 1 : 0.38, transition: "opacity 0.3s ease" }}>
+                    <div style={{ width: 24, height: 24, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", border: `1px solid ${done ? "var(--c-green)" : active ? "var(--c-accent)" : "var(--c-border)"}`, background: done ? "var(--c-green-bg)" : active ? "var(--c-accent-bg)" : "transparent", color: done ? "var(--c-green)" : active ? "var(--c-accent)" : "var(--c-text-tertiary)" }}>
+                      {done ? <IconCheck /> : active ? <IconSpinner /> : <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11 }}>{i + 1}</span>}
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: active ? 500 : 400, color: done ? "var(--c-green)" : active ? "var(--c-text)" : "var(--c-text-secondary)" }}>{step}</span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Evaluator tip */}
+            <div style={{ padding: "12px 16px", borderRadius: 8, border: "1px solid var(--c-border)", background: "var(--c-surface-hover)", marginBottom: 16 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: "var(--c-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.07em", fontFamily: "'JetBrains Mono',monospace", marginBottom: 5 }}>Evaluator Tip</p>
+              <p style={{ fontSize: 12, color: "var(--c-text-secondary)", lineHeight: 1.65 }}>{TIPS[tipIdx]}</p>
+            </div>
 
             {/* Alternating Did You Know / Quiz card */}
             {loadingSeqPos % 2 === 0 ? (
               /* ── DID YOU KNOW card ── */
-              <div key={`fact-${loadingSeqPos}`} style={{ animation: "upscFadeIn 0.3s ease", border: "1px solid var(--c-border)", borderRadius: 10, background: "var(--c-surface)", padding: "20px 22px", marginBottom: 16 }}>
+              <div key={`fact-${loadingSeqPos}`} style={{ animation: "upscFadeIn 0.3s ease", border: "1px solid var(--c-border)", borderRadius: 10, background: "var(--c-surface)", padding: "20px 22px" }}>
                 <p style={{ fontSize: 11, fontWeight: 700, color: "var(--c-accent)", textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: "'JetBrains Mono',monospace", marginBottom: 14 }}>Did You Know</p>
                 <p style={{ fontFamily: "'Noto Serif',Georgia,serif", fontSize: 24, fontWeight: 700, color: "var(--c-text)", lineHeight: 1.2, marginBottom: 10 }}>
                   {DID_YOU_KNOW[Math.floor(loadingSeqPos / 2) % DID_YOU_KNOW.length].big}
@@ -1061,7 +1057,7 @@ export default function UPSCEvaluator() {
                 const qIdx = Math.floor((loadingSeqPos - 1) / 2) % QUIZ_QUESTIONS.length;
                 const q = QUIZ_QUESTIONS[qIdx];
                 return (
-                  <div key={`quiz-${loadingSeqPos}`} style={{ animation: "upscFadeIn 0.3s ease", border: "1px solid var(--c-border)", borderRadius: 10, background: "var(--c-surface)", padding: "20px 22px", marginBottom: 16 }}>
+                  <div key={`quiz-${loadingSeqPos}`} style={{ animation: "upscFadeIn 0.3s ease", border: "1px solid var(--c-border)", borderRadius: 10, background: "var(--c-surface)", padding: "20px 22px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
                       <p style={{ fontSize: 11, fontWeight: 700, color: "var(--c-amber)", textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: "'JetBrains Mono',monospace" }}>Quick Quiz</p>
                       {quizScore.total > 0 && (
@@ -1077,17 +1073,13 @@ export default function UPSCEvaluator() {
                           else if (i === quizAnswered) { bg = "var(--c-red-bg)"; borderColor = "var(--c-red)"; color = "var(--c-red)"; }
                         }
                         return (
-                          <button
-                            key={i}
-                            className="quiz-opt"
-                            disabled={quizAnswered !== null}
+                          <button key={i} className="quiz-opt" disabled={quizAnswered !== null}
                             onClick={() => {
                               if (quizAnswered !== null) return;
                               setQuizAnswered(i);
                               setQuizScore(s => ({ correct: s.correct + (i === q.correct ? 1 : 0), total: s.total + 1 }));
                             }}
-                            style={{ background: bg, border: `1px solid ${borderColor}`, color }}
-                          >
+                            style={{ background: bg, border: `1px solid ${borderColor}`, color }}>
                             {opt}
                           </button>
                         );
@@ -1102,12 +1094,6 @@ export default function UPSCEvaluator() {
                 );
               })()
             )}
-
-            {/* Evaluator tip (subtle, below main card) */}
-            <div style={{ padding: "12px 16px", borderRadius: 8, border: "1px solid var(--c-border)", background: "var(--c-surface-hover)" }}>
-              <p style={{ fontSize: 11, fontWeight: 700, color: "var(--c-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.07em", fontFamily: "'JetBrains Mono',monospace", marginBottom: 5 }}>Evaluator Tip</p>
-              <p style={{ fontSize: 12, color: "var(--c-text-secondary)", lineHeight: 1.65 }}>{TIPS[tipIdx]}</p>
-            </div>
           </div>
         )}
 
@@ -1262,46 +1248,60 @@ export default function UPSCEvaluator() {
               </div>
             )}
 
-            {/* Retry block */}
-            <div style={{ marginTop: 24, padding: 20, borderRadius: 10, border: "1px solid var(--c-border)", background: "var(--c-surface)" }}>
-              <p style={{ fontSize: 14, fontWeight: 500, marginBottom: 14 }}>Want to improve? Try again with our suggestions.</p>
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <button onClick={doRetryWrite} style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius: 6, border: "none", background: "var(--c-text)", color: "var(--c-bg)", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-                  <IconRefresh /> Rewrite in Editor
-                </button>
-                <button onClick={doNewPDF} style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 18px", borderRadius: 6, border: "1px solid var(--c-border)", background: "transparent", color: "var(--c-text-secondary)", fontSize: 13, fontWeight: 500, cursor: "pointer", transition: "border-color 0.15s" }}
-                  onMouseEnter={e => e.currentTarget.style.borderColor = "var(--c-text-tertiary)"}
-                  onMouseLeave={e => e.currentTarget.style.borderColor = "var(--c-border)"}>
-                  <IconUpload size={13} /> Upload New PDF
-                </button>
-              </div>
-              <p style={{ marginTop: 12, fontSize: 12, color: "var(--c-text-tertiary)" }}>Do not close this tab — your attempt history is session-based and will be lost.</p>
+            {/* Minimal text action row */}
+            <div style={{ marginTop: 28, display: "flex", alignItems: "center", flexWrap: "wrap" }}>
+              <button
+                onClick={() => setShowSuggestPrompt(p => !p)}
+                style={{ background: "none", border: "none", fontSize: 13, color: "var(--c-text-secondary)", cursor: "pointer", padding: "4px 0" }}
+                onMouseEnter={e => e.currentTarget.style.color = "var(--c-text)"}
+                onMouseLeave={e => e.currentTarget.style.color = "var(--c-text-secondary)"}>
+                See Suggested Answer
+              </button>
+              <span style={{ color: "var(--c-text-tertiary)", margin: "0 10px", userSelect: "none" }}>·</span>
+              <button
+                onClick={() => setShowModal(true)}
+                style={{ background: "none", border: "none", fontSize: 13, color: "var(--c-text-secondary)", cursor: "pointer", padding: "4px 0" }}
+                onMouseEnter={e => e.currentTarget.style.color = "var(--c-text)"}
+                onMouseLeave={e => e.currentTarget.style.color = "var(--c-text-secondary)"}>
+                Rate
+              </button>
+              <span style={{ color: "var(--c-text-tertiary)", margin: "0 10px", userSelect: "none" }}>·</span>
+              <button
+                onClick={doShare}
+                style={{ background: "none", border: "none", fontSize: 13, color: "var(--c-text-secondary)", cursor: "pointer", padding: "4px 0" }}
+                onMouseEnter={e => e.currentTarget.style.color = "var(--c-text)"}
+                onMouseLeave={e => e.currentTarget.style.color = "var(--c-text-secondary)"}>
+                {shareMsg || "Share"}
+              </button>
             </div>
 
-            {/* Bottom actions */}
-            <div style={{ marginTop: 14, display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button onClick={() => setShowModal(true)} style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid var(--c-border)", background: "transparent", color: "var(--c-text-secondary)", fontSize: 13, cursor: "pointer", transition: "border-color 0.15s" }}
-                onMouseEnter={e => e.currentTarget.style.borderColor = "var(--c-text-tertiary)"}
-                onMouseLeave={e => e.currentTarget.style.borderColor = "var(--c-border)"}>
-                Rate this evaluation
-              </button>
-              <button onClick={doShare} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 16px", borderRadius: 6, border: "1px solid var(--c-border)", background: "transparent", color: "var(--c-text-secondary)", fontSize: 13, cursor: "pointer", transition: "border-color 0.15s" }}
-                onMouseEnter={e => e.currentTarget.style.borderColor = "var(--c-text-tertiary)"}
-                onMouseLeave={e => e.currentTarget.style.borderColor = "var(--c-border)"}>
-                <IconShare /> {shareMsg || "Share Score"}
-              </button>
-            </div>
+            {/* Inline suggest prompt */}
+            {showSuggestPrompt && (
+              <div style={{ marginTop: 14, padding: "14px 16px", borderRadius: 8, border: "1px solid var(--c-border)", background: "var(--c-surface)", animation: "upscSlideIn 0.15s ease" }}>
+                <p style={{ fontSize: 13, color: "var(--c-text)", lineHeight: 1.65, marginBottom: 12 }}>Want to try rewriting yourself first? You'll improve more by trying.</p>
+                <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+                  <button
+                    onClick={doRetryWrite}
+                    style={{ background: "none", border: "none", fontSize: 13, color: "var(--c-accent)", cursor: "pointer", padding: 0, display: "inline-flex", alignItems: "center", gap: 4 }}
+                    onMouseEnter={e => (e.currentTarget.style.opacity = "0.75")}
+                    onMouseLeave={e => (e.currentTarget.style.opacity = "1")}>
+                    Let me try first <IconArrowRight size={12} />
+                  </button>
+                  <button
+                    onClick={() => { console.log("TODO: generate suggested answer"); }}
+                    style={{ background: "none", border: "none", fontSize: 13, color: "var(--c-text-secondary)", cursor: "pointer", padding: 0 }}
+                    onMouseEnter={e => e.currentTarget.style.color = "var(--c-text)"}
+                    onMouseLeave={e => e.currentTarget.style.color = "var(--c-text-secondary)"}>
+                    Show suggested version
+                  </button>
+                </div>
+              </div>
+            )}
 
           </div>
         )}
 
       </main>
-
-      {/* ── FOOTER ── */}
-      <footer style={{ borderTop: "1px solid var(--c-border)", padding: "12px 24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontSize: 12, color: "var(--c-text-tertiary)" }}>Powered by Llama 3.3 70B</span>
-        <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 12, color: "var(--c-text-tertiary)" }}>v3.0</span>
-      </footer>
 
       {/* ── FEEDBACK MODAL ── */}
       {showModal && (
