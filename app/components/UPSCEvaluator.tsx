@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    SAMPLE DATA
@@ -369,6 +369,60 @@ function IconChevronDown({ size = 14 }: { size?: number }) {
     </svg>
   );
 }
+function IconBrain({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+    </svg>
+  );
+}
+function IconBarChart({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="20" x2="18" y2="10" />
+      <line x1="12" y1="20" x2="12" y2="4" />
+      <line x1="6" y1="20" x2="6" y2="14" />
+    </svg>
+  );
+}
+function IconTrendingUp({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+      <polyline points="17 6 23 6 23 12" />
+    </svg>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SUGGESTED ANSWER RENDERER
+═══════════════════════════════════════════════════════════════════════════ */
+
+function renderSuggestedAnswer(text: string) {
+  const lines = text.split("\n");
+  return lines.map((line, i) => {
+    const trimmed = line.trim();
+    if (!trimmed) return <div key={i} style={{ height: 8 }} />;
+    if (trimmed.startsWith("[IMPROVED]")) {
+      return (
+        <div key={i} style={{ borderLeft: "3px solid var(--c-green)", background: "var(--c-green-bg)", borderRadius: "0 4px 4px 0", padding: "6px 12px", marginBottom: 4 }}>
+          <p style={{ fontSize: 13, lineHeight: 1.75, color: "var(--c-text)" }}>{trimmed.replace("[IMPROVED]", "").trim()}</p>
+        </div>
+      );
+    }
+    if (trimmed.startsWith("[ADDED]")) {
+      return (
+        <div key={i} style={{ borderLeft: "3px solid var(--c-accent)", background: "var(--c-accent-bg)", borderRadius: "0 4px 4px 0", padding: "6px 12px", marginBottom: 4 }}>
+          <p style={{ fontSize: 13, lineHeight: 1.75, color: "var(--c-text)" }}>{trimmed.replace("[ADDED]", "").trim()}</p>
+        </div>
+      );
+    }
+    return (
+      <p key={i} style={{ fontSize: 13, lineHeight: 1.75, color: "var(--c-text-secondary)", marginBottom: 4 }}>{trimmed}</p>
+    );
+  });
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════
    SCORE RING
@@ -497,7 +551,6 @@ export default function UPSCEvaluator() {
 
   /* ── V3 entry mode ── */
   const [entryMode, setEntryMode] = useState<"upload" | "practice" | null>(null);
-  const [sampleExpanded, setSampleExpanded] = useState(false);
   const [showQuestionPicker, setShowQuestionPicker] = useState(false);
 
   /* ── PYQ ── */
@@ -505,6 +558,9 @@ export default function UPSCEvaluator() {
 
   /* ── results actions ── */
   const [showSuggestPrompt, setShowSuggestPrompt] = useState(false);
+  const [suggestedAnswer, setSuggestedAnswer] = useState<string | null>(null);
+  const [suggestLoading, setSuggestLoading] = useState(false);
+  const [showSuggestedView, setShowSuggestedView] = useState(false);
 
   /* ── editor ── */
   const [editorHtml, setEditorHtml] = useState("");
@@ -688,6 +744,40 @@ export default function UPSCEvaluator() {
     setShowModal(false); setStars(0); setFbNote("");
   };
 
+  const fetchSuggestedAnswer = async () => {
+    if (!result) return;
+    setSuggestLoading(true);
+    const weakDims = result.dimensions.filter(d => d.score < 6).map(d => d.name);
+    const errors = result.factualErrors.map(e => ({ errorText: e.errorText, correction: e.correction }));
+    try {
+      const response = await fetch("https://PranshuT-upsc-answer-evaluator.hf.space/suggest-answer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: submittedText,
+          question: submittedQuestion,
+          improvements: result.improvements,
+          factual_errors: errors,
+          weak_dimensions: weakDims,
+        }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setSuggestedAnswer(data.suggested_answer);
+        setShowSuggestedView(true);
+      } else {
+        console.warn("Suggest answer failed:", response.status);
+        setSuggestedAnswer("Could not generate suggestion. Try again later.");
+        setShowSuggestedView(true);
+      }
+    } catch (err) {
+      console.error("Suggest answer error:", err);
+      setSuggestedAnswer("Could not generate suggestion. Check your connection.");
+      setShowSuggestedView(true);
+    }
+    setSuggestLoading(false);
+  };
+
   /* ── theme vars ── */
   const themeStyle = darkMode ? {
     "--c-bg": "#191919", "--c-surface": "#252525", "--c-surface-hover": "#2F2F2F",
@@ -734,6 +824,10 @@ export default function UPSCEvaluator() {
     .entry-card.active { border-color:var(--c-accent); background:var(--c-accent-bg); }
     .quiz-opt { text-align:left; padding:10px 14px; border-radius:6px; font-size:13px; font-family:inherit; cursor:pointer; transition:all 0.15s; }
     .quiz-opt:disabled { cursor:default; }
+    .walkthrough-row { display:flex; gap:12px; align-items:stretch; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+    .walkthrough-row::-webkit-scrollbar { display:none; }
+    .walkthrough-step { scroll-snap-align:start; flex-shrink:0; min-width:150px; flex:1; }
+    @media(max-width:600px) { .walkthrough-step { min-width:140px; flex:none; width:70vw; } .walkthrough-arrow { display:none; } }
   `;
 
   /* ════════════════════════════════════════════════════════════════════════
@@ -915,66 +1009,32 @@ export default function UPSCEvaluator() {
               </div>
             )}
 
-            {/* Sample evaluation preview */}
-            <div style={{ marginTop: 36, border: "1px solid var(--c-border)", borderRadius: 10, background: "var(--c-surface)", overflow: "hidden" }}>
-              <button
-                onClick={() => setSampleExpanded(e => !e)}
-                style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 18px", background: "transparent", border: "none", cursor: "pointer", borderBottom: sampleExpanded ? "1px solid var(--c-border)" : "none", transition: "background 0.12s" }}
-                onMouseEnter={e => e.currentTarget.style.background = "var(--c-surface-hover)"}
-                onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-              >
-                <div style={{ textAlign: "left" }}>
-                  <p style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>See a sample evaluation</p>
-                  <p style={{ fontSize: 12, color: "var(--c-text-secondary)" }}>GS2 — Governor's role · 54% · 7 dimensions scored</p>
-                </div>
-                <span style={{ color: "var(--c-text-tertiary)", display: "flex", alignItems: "center", transform: sampleExpanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>
-                  <IconChevronDown />
-                </span>
-              </button>
-              {sampleExpanded && (
-                <div style={{ padding: "18px 20px", animation: "upscSlideIn 0.15s ease" }}>
-                  <div style={{ display: "flex", gap: 20, alignItems: "flex-start", flexWrap: "wrap", marginBottom: 16 }}>
-                    <ScoreRing score={MOCK_RESULT.overallScore} max={MOCK_RESULT.maxScore} size={76} />
-                    <div style={{ flex: 1, minWidth: 180 }}>
-                      <p style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 13, fontWeight: 700, marginBottom: 6 }}>{MOCK_RESULT.overallScore} / {MOCK_RESULT.maxScore} · {MOCK_RESULT.percentage}%</p>
-                      <p style={{ fontSize: 12, color: "var(--c-text-secondary)", lineHeight: 1.55 }}>{MOCK_RESULT.examinerVerdict.slice(0, 140)}…</p>
+            {/* Step walkthrough */}
+            <div style={{ marginTop: 36 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: "var(--c-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: "'JetBrains Mono',monospace", marginBottom: 16 }}>How it works</p>
+              <div className="walkthrough-row">
+                {([
+                  { icon: <IconUpload size={18} />, bg: "var(--c-accent)", title: "Upload or write", sub: "Any handwriting, typed PDF, or write directly in browser" },
+                  { icon: <IconBrain size={18} />, bg: "var(--c-amber)", title: "AI evaluates", sub: "Two specialist agents score your answer in under 30 seconds" },
+                  { icon: <IconBarChart size={18} />, bg: "var(--c-green)", title: "Detailed feedback", sub: "7 dimensions, factual errors caught, examiner verdict" },
+                  { icon: <IconTrendingUp size={18} />, bg: "var(--c-accent)", title: "Fix & retry", sub: "See exactly what to change, rewrite, and track your improvement" },
+                ] as Array<{ icon: React.ReactNode; bg: string; title: string; sub: string }>).map((step, i, arr) => (
+                  <React.Fragment key={i}>
+                    <div className="walkthrough-step" style={{ padding: 16, borderRadius: 10, border: "1px solid var(--c-border)", background: "var(--c-surface)" }}>
+                      <div style={{ width: 36, height: 36, borderRadius: "50%", background: step.bg, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", marginBottom: 12, flexShrink: 0 }}>
+                        {step.icon}
+                      </div>
+                      <p style={{ fontWeight: 600, fontSize: 13, marginBottom: 5, color: "var(--c-text)" }}>{step.title}</p>
+                      <p style={{ fontSize: 12, color: "var(--c-text-secondary)", lineHeight: 1.55 }}>{step.sub}</p>
                     </div>
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    {MOCK_RESULT.dimensions.slice(0, 4).map((dim, i) => {
-                      const pct = (dim.score / dim.max) * 100;
-                      return (
-                        <div key={i}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 0 }}>
-                            <span style={{ fontSize: 12, color: "var(--c-text-secondary)" }}>{dim.name}</span>
-                            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, fontWeight: 700, color: pctColor(pct) }}>{dim.score}/{dim.max}</span>
-                          </div>
-                          <ScoreBar pct={pct} color={pctColor(pct)} delay={i * 60} />
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+                    {i < arr.length - 1 && (
+                      <div className="walkthrough-arrow" style={{ display: "flex", alignItems: "center", flexShrink: 0, color: "var(--c-text-tertiary)", fontSize: 16 }}>→</div>
+                    )}
+                  </React.Fragment>
+                ))}
+              </div>
             </div>
 
-            {/* How it works */}
-            <div style={{ marginTop: 36 }}>
-              <p style={{ fontSize: 11, fontWeight: 700, color: "var(--c-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: "'JetBrains Mono',monospace", marginBottom: 18 }}>How it works</p>
-              {[
-                { n: "1", title: "Write or upload", desc: "Type your answer directly in the browser, or upload a handwritten or typed PDF answer sheet." },
-                { n: "2", title: "AI evaluates in seconds", desc: "Scored against 7 UPSC-specific dimensions including factual accuracy, structure, and current affairs integration." },
-                { n: "3", title: "Improve and retry", desc: "Get specific corrections, targeted improvements, and retry immediately — track your progress across attempts." },
-              ].map((step, i) => (
-                <div key={i} style={{ display: "flex", gap: 14, alignItems: "flex-start", marginBottom: i < 2 ? 18 : 0 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: "50%", border: "1px solid var(--c-accent)", background: "var(--c-accent-bg)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'JetBrains Mono',monospace", fontSize: 12, fontWeight: 700, color: "var(--c-accent)", flexShrink: 0 }}>{step.n}</div>
-                  <div>
-                    <p style={{ fontWeight: 600, fontSize: 13, marginBottom: 3 }}>{step.title}</p>
-                    <p style={{ fontSize: 13, color: "var(--c-text-secondary)", lineHeight: 1.55 }}>{step.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
 
           </div>
         )}
@@ -1217,13 +1277,31 @@ export default function UPSCEvaluator() {
               </div>
             )}
 
+            {/* Suggested answer card */}
+            {showSuggestedView && suggestedAnswer && (
+              <div style={{ marginTop: 24, border: "1px solid var(--c-border)", borderRadius: 10, background: "var(--c-surface)", padding: 20, animation: "upscSlideIn 0.15s ease" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: "var(--c-accent)", textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: "'JetBrains Mono',monospace" }}>Suggested Version</p>
+                  <button onClick={() => setShowSuggestedView(false)} style={{ padding: 4, border: "none", background: "transparent", color: "var(--c-text-secondary)", cursor: "pointer", display: "flex", alignItems: "center" }}><IconX size={14} /></button>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  {renderSuggestedAnswer(suggestedAnswer)}
+                </div>
+                <p style={{ marginTop: 14, fontSize: 11, color: "var(--c-text-tertiary)", fontFamily: "'JetBrains Mono',monospace" }}>
+                  {[...suggestedAnswer.matchAll(/\[(IMPROVED|ADDED)\]/g)].length} improvements applied
+                </p>
+              </div>
+            )}
+
             {/* Action row — bordered compact buttons */}
             <div style={{ marginTop: 24, display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button
                 onClick={() => setShowSuggestPrompt(p => !p)}
-                style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid var(--c-border)", background: "transparent", color: "var(--c-text-secondary)", fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
-                onMouseEnter={e => e.currentTarget.style.borderColor = "var(--c-text-tertiary)"}
+                disabled={suggestLoading}
+                style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid var(--c-border)", background: "transparent", color: "var(--c-text-secondary)", fontSize: 13, cursor: suggestLoading ? "default" : "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center", gap: 6, opacity: suggestLoading ? 0.65 : 1 }}
+                onMouseEnter={e => { if (!suggestLoading) e.currentTarget.style.borderColor = "var(--c-text-tertiary)"; }}
                 onMouseLeave={e => e.currentTarget.style.borderColor = "var(--c-border)"}>
+                {suggestLoading && <IconSpinner size={12} />}
                 See Suggested Answer
               </button>
               <button
@@ -1255,7 +1333,7 @@ export default function UPSCEvaluator() {
                     Let me try first <IconArrowRight size={12} />
                   </button>
                   <button
-                    onClick={() => { console.log("TODO: generate suggested answer"); }}
+                    onClick={() => { setShowSuggestPrompt(false); fetchSuggestedAnswer(); }}
                     style={{ background: "none", border: "none", fontSize: 13, color: "var(--c-text-secondary)", cursor: "pointer", padding: 0 }}
                     onMouseEnter={e => e.currentTarget.style.color = "var(--c-text)"}
                     onMouseLeave={e => e.currentTarget.style.color = "var(--c-text-secondary)"}>
