@@ -45,25 +45,6 @@ const FLAT_PYQ: Array<{ id: string; q: string; marks: number; paper: string }> =
     )
   );
 
-const SAMPLE_CURRENT_AFFAIRS = [
-  { title: "SC ruling on Governor's assent powers — implications for federalism", source: "The Hindu", time: "3 hours ago", tag: "GS2" },
-  { title: "NITI Aayog releases SDG India Index 2026 — Kerala tops, Bihar last", source: "PIB", time: "Today", tag: "GS3" },
-  { title: "India-EU FTA Round 5 concludes — key sticking points remain", source: "LiveMint", time: "Yesterday", tag: "GS2" },
-  { title: "RBI holds repo rate at 6% — inflation concerns ease", source: "Economic Times", time: "2 days ago", tag: "GS3" },
-  { title: "New Criminal Laws (BNS, BNSS, BSA) — 6 months of implementation review", source: "Indian Express", time: "3 days ago", tag: "GS2" },
-];
-
-const TIPS = [
-  "For 'critically examine' questions, examiners expect a 40% for / 40% against / 20% your position split.",
-  "Examiners spend about 90 seconds per answer. Your introduction and conclusion carry outsized weight.",
-  "The 7-5-3 rule: 15-mark answers need ~7 points, 10-mark need ~5, 5-mark need ~3.",
-  "Generic conclusions like 'Thus, a balanced approach is needed' actively lose marks. Be specific.",
-  "Depth markers matter: cite specific articles, acts, committee reports, or case studies — not just concepts.",
-  "Time allocation: spend 7 minutes on a 10-mark answer, 10 minutes on 15-mark. No more.",
-  "Start with a crisp opening line that directly addresses the question. Never start with 'Since time immemorial...'",
-  "A way forward section at the end is expected for most Discuss/Examine questions. Don't skip it.",
-];
-
 const DID_YOU_KNOW = [
   { big: "Article 356", fact: "President's Rule has been imposed 132 times since 1950. The most frequent decade was the 1970s with 40 impositions.", tags: ["GS2", "Polity"] },
   { big: "90 seconds", fact: "That's roughly how long a UPSC examiner spends on each answer. Your introduction and conclusion are read most carefully.", tags: ["Strategy"] },
@@ -542,8 +523,8 @@ export default function UPSCEvaluator() {
 
   /* ── loading ── */
   const [loadingStep, setLoadingStep] = useState(-1);
-  const [tipIdx, setTipIdx] = useState(0);
-  const [loadingSeqPos, setLoadingSeqPos] = useState(0);
+  const [dykIndex, setDykIndex] = useState(0);
+  const [quizIndex, setQuizIndex] = useState(0);
   const [quizAnswered, setQuizAnswered] = useState<number | null>(null);
   const [quizScore, setQuizScore] = useState({ correct: 0, total: 0 });
 
@@ -641,25 +622,22 @@ export default function UPSCEvaluator() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [screen]);
 
-  /* ── tip rotation ── */
+  /* ── DYK rotation — independent 5s timer ── */
   useEffect(() => {
     if (screen !== "loading") return;
-    const id = window.setInterval(() => setTipIdx(i => (i + 1) % TIPS.length), 4000);
+    const id = window.setInterval(() => setDykIndex(i => (i + 1) % DID_YOU_KNOW.length), 5000);
     return () => window.clearInterval(id);
   }, [screen]);
 
-  /* ── loading card sequence rotation ── */
+  /* ── MCQ auto-advance 3s after answer ── */
   useEffect(() => {
-    if (screen !== "loading") return;
-    const isQuiz = loadingSeqPos % 2 !== 0;
-    if (isQuiz && quizAnswered === null) return; // wait for user to tap
-    const delay = isQuiz ? 3000 : 5000;
+    if (screen !== "loading" || quizAnswered === null) return;
     const timer = window.setTimeout(() => {
-      setLoadingSeqPos(p => p + 1);
+      setQuizIndex(i => (i + 1) % QUIZ_QUESTIONS.length);
       setQuizAnswered(null);
-    }, delay);
+    }, 3000);
     return () => window.clearTimeout(timer);
-  }, [screen, loadingSeqPos, quizAnswered]);
+  }, [screen, quizAnswered]);
 
   /* ── helpers ── */
   const canEvaluate =
@@ -679,7 +657,8 @@ export default function UPSCEvaluator() {
       setSubmittedText("");
       setEntryTab("pdf");
     }
-    setLoadingSeqPos(0);
+    setDykIndex(0);
+    setQuizIndex(0);
     setQuizAnswered(null);
     setQuizScore({ correct: 0, total: 0 });
     setLoadingStep(-1);
@@ -1028,72 +1007,62 @@ export default function UPSCEvaluator() {
               })}
             </div>
 
-            {/* Evaluator tip */}
-            <div style={{ padding: "12px 16px", borderRadius: 8, border: "1px solid var(--c-border)", background: "var(--c-surface-hover)", marginBottom: 16 }}>
-              <p style={{ fontSize: 11, fontWeight: 700, color: "var(--c-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.07em", fontFamily: "'JetBrains Mono',monospace", marginBottom: 5 }}>Evaluator Tip</p>
-              <p style={{ fontSize: 12, color: "var(--c-text-secondary)", lineHeight: 1.65 }}>{TIPS[tipIdx]}</p>
+            {/* Did You Know card — always visible, auto-rotates every 5s */}
+            <div key={dykIndex} style={{ animation: "upscFadeIn 0.3s ease", border: "1px solid var(--c-border)", borderRadius: 10, background: "var(--c-surface)", padding: "20px 22px", marginBottom: 12 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: "var(--c-accent)", textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: "'JetBrains Mono',monospace", marginBottom: 14 }}>Did You Know</p>
+              <p style={{ fontFamily: "'Noto Serif',Georgia,serif", fontSize: 24, fontWeight: 700, color: "var(--c-text)", lineHeight: 1.2, marginBottom: 10 }}>
+                {DID_YOU_KNOW[dykIndex].big}
+              </p>
+              <p style={{ fontSize: 13, color: "var(--c-text-secondary)", lineHeight: 1.7, marginBottom: 14 }}>
+                {DID_YOU_KNOW[dykIndex].fact}
+              </p>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {DID_YOU_KNOW[dykIndex].tags.map((tag, i) => (
+                  <span key={i} style={{ padding: "2px 8px", borderRadius: 4, background: "var(--c-accent-bg)", color: "var(--c-accent)", fontSize: 11, fontWeight: 600, fontFamily: "'JetBrains Mono',monospace" }}>{tag}</span>
+                ))}
+              </div>
             </div>
 
-            {/* Alternating Did You Know / Quiz card */}
-            {loadingSeqPos % 2 === 0 ? (
-              /* ── DID YOU KNOW card ── */
-              <div key={`fact-${loadingSeqPos}`} style={{ animation: "upscFadeIn 0.3s ease", border: "1px solid var(--c-border)", borderRadius: 10, background: "var(--c-surface)", padding: "20px 22px" }}>
-                <p style={{ fontSize: 11, fontWeight: 700, color: "var(--c-accent)", textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: "'JetBrains Mono',monospace", marginBottom: 14 }}>Did You Know</p>
-                <p style={{ fontFamily: "'Noto Serif',Georgia,serif", fontSize: 24, fontWeight: 700, color: "var(--c-text)", lineHeight: 1.2, marginBottom: 10 }}>
-                  {DID_YOU_KNOW[Math.floor(loadingSeqPos / 2) % DID_YOU_KNOW.length].big}
-                </p>
-                <p style={{ fontSize: 13, color: "var(--c-text-secondary)", lineHeight: 1.7, marginBottom: 14 }}>
-                  {DID_YOU_KNOW[Math.floor(loadingSeqPos / 2) % DID_YOU_KNOW.length].fact}
-                </p>
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  {DID_YOU_KNOW[Math.floor(loadingSeqPos / 2) % DID_YOU_KNOW.length].tags.map((tag, i) => (
-                    <span key={i} style={{ padding: "2px 8px", borderRadius: 4, background: "var(--c-accent-bg)", color: "var(--c-accent)", fontSize: 11, fontWeight: 600, fontFamily: "'JetBrains Mono',monospace" }}>{tag}</span>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              /* ── QUIZ card ── */
-              (() => {
-                const qIdx = Math.floor((loadingSeqPos - 1) / 2) % QUIZ_QUESTIONS.length;
-                const q = QUIZ_QUESTIONS[qIdx];
-                return (
-                  <div key={`quiz-${loadingSeqPos}`} style={{ animation: "upscFadeIn 0.3s ease", border: "1px solid var(--c-border)", borderRadius: 10, background: "var(--c-surface)", padding: "20px 22px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-                      <p style={{ fontSize: 11, fontWeight: 700, color: "var(--c-amber)", textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: "'JetBrains Mono',monospace" }}>Quick Quiz</p>
-                      {quizScore.total > 0 && (
-                        <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: "var(--c-text-tertiary)" }}>{quizScore.correct}/{quizScore.total} correct</span>
-                      )}
-                    </div>
-                    <p style={{ fontSize: 14, fontWeight: 500, color: "var(--c-text)", lineHeight: 1.6, marginBottom: 14 }}>{q.question}</p>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {q.options.map((opt, i) => {
-                        let bg = "var(--c-surface-hover)", borderColor = "var(--c-border)", color = "var(--c-text)";
-                        if (quizAnswered !== null) {
-                          if (i === q.correct) { bg = "var(--c-green-bg)"; borderColor = "var(--c-green)"; color = "var(--c-green)"; }
-                          else if (i === quizAnswered) { bg = "var(--c-red-bg)"; borderColor = "var(--c-red)"; color = "var(--c-red)"; }
-                        }
-                        return (
-                          <button key={i} className="quiz-opt" disabled={quizAnswered !== null}
-                            onClick={() => {
-                              if (quizAnswered !== null) return;
-                              setQuizAnswered(i);
-                              setQuizScore(s => ({ correct: s.correct + (i === q.correct ? 1 : 0), total: s.total + 1 }));
-                            }}
-                            style={{ background: bg, border: `1px solid ${borderColor}`, color }}>
-                            {opt}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {quizAnswered !== null && (
-                      <div style={{ marginTop: 14, padding: "10px 14px", borderRadius: 6, background: "var(--c-accent-bg)", borderLeft: "3px solid var(--c-accent)", animation: "upscSlideIn 0.15s ease" }}>
-                        <p style={{ fontSize: 12, color: "var(--c-text-secondary)", lineHeight: 1.65 }}>{q.explanation}</p>
-                      </div>
+            {/* Quick Quiz card — always visible, advances after answer (3s) */}
+            {(() => {
+              const q = QUIZ_QUESTIONS[quizIndex];
+              return (
+                <div style={{ animation: "upscFadeIn 0.3s ease", border: "1px solid var(--c-border)", borderRadius: 10, background: "var(--c-surface)", padding: "20px 22px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: "var(--c-amber)", textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: "'JetBrains Mono',monospace" }}>Quick Quiz</p>
+                    {quizScore.total > 0 && (
+                      <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: "var(--c-text-tertiary)" }}>{quizScore.correct}/{quizScore.total} correct</span>
                     )}
                   </div>
-                );
-              })()
-            )}
+                  <p style={{ fontSize: 14, fontWeight: 500, color: "var(--c-text)", lineHeight: 1.6, marginBottom: 14 }}>{q.question}</p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {q.options.map((opt, i) => {
+                      let bg = "var(--c-surface-hover)", borderColor = "var(--c-border)", color = "var(--c-text)";
+                      if (quizAnswered !== null) {
+                        if (i === q.correct) { bg = "var(--c-green-bg)"; borderColor = "var(--c-green)"; color = "var(--c-green)"; }
+                        else if (i === quizAnswered) { bg = "var(--c-red-bg)"; borderColor = "var(--c-red)"; color = "var(--c-red)"; }
+                      }
+                      return (
+                        <button key={i} className="quiz-opt" disabled={quizAnswered !== null}
+                          onClick={() => {
+                            if (quizAnswered !== null) return;
+                            setQuizAnswered(i);
+                            setQuizScore(s => ({ correct: s.correct + (i === q.correct ? 1 : 0), total: s.total + 1 }));
+                          }}
+                          style={{ background: bg, border: `1px solid ${borderColor}`, color }}>
+                          {opt}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {quizAnswered !== null && (
+                    <div style={{ marginTop: 14, padding: "10px 14px", borderRadius: 6, background: "var(--c-accent-bg)", borderLeft: "3px solid var(--c-accent)", animation: "upscSlideIn 0.15s ease" }}>
+                      <p style={{ fontSize: 12, color: "var(--c-text-secondary)", lineHeight: 1.65 }}>{q.explanation}</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -1248,29 +1217,27 @@ export default function UPSCEvaluator() {
               </div>
             )}
 
-            {/* Minimal text action row */}
-            <div style={{ marginTop: 28, display: "flex", alignItems: "center", flexWrap: "wrap" }}>
+            {/* Action row — bordered compact buttons */}
+            <div style={{ marginTop: 24, display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button
                 onClick={() => setShowSuggestPrompt(p => !p)}
-                style={{ background: "none", border: "none", fontSize: 13, color: "var(--c-text-secondary)", cursor: "pointer", padding: "4px 0" }}
-                onMouseEnter={e => e.currentTarget.style.color = "var(--c-text)"}
-                onMouseLeave={e => e.currentTarget.style.color = "var(--c-text-secondary)"}>
+                style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid var(--c-border)", background: "transparent", color: "var(--c-text-secondary)", fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = "var(--c-text-tertiary)"}
+                onMouseLeave={e => e.currentTarget.style.borderColor = "var(--c-border)"}>
                 See Suggested Answer
               </button>
-              <span style={{ color: "var(--c-text-tertiary)", margin: "0 10px", userSelect: "none" }}>·</span>
               <button
                 onClick={() => setShowModal(true)}
-                style={{ background: "none", border: "none", fontSize: 13, color: "var(--c-text-secondary)", cursor: "pointer", padding: "4px 0" }}
-                onMouseEnter={e => e.currentTarget.style.color = "var(--c-text)"}
-                onMouseLeave={e => e.currentTarget.style.color = "var(--c-text-secondary)"}>
+                style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid var(--c-border)", background: "transparent", color: "var(--c-text-secondary)", fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = "var(--c-text-tertiary)"}
+                onMouseLeave={e => e.currentTarget.style.borderColor = "var(--c-border)"}>
                 Rate
               </button>
-              <span style={{ color: "var(--c-text-tertiary)", margin: "0 10px", userSelect: "none" }}>·</span>
               <button
                 onClick={doShare}
-                style={{ background: "none", border: "none", fontSize: 13, color: "var(--c-text-secondary)", cursor: "pointer", padding: "4px 0" }}
-                onMouseEnter={e => e.currentTarget.style.color = "var(--c-text)"}
-                onMouseLeave={e => e.currentTarget.style.color = "var(--c-text-secondary)"}>
+                style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid var(--c-border)", background: "transparent", color: "var(--c-text-secondary)", fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = "var(--c-text-tertiary)"}
+                onMouseLeave={e => e.currentTarget.style.borderColor = "var(--c-border)"}>
                 {shareMsg || "Share"}
               </button>
             </div>
