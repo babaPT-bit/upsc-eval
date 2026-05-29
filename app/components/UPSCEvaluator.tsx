@@ -135,6 +135,7 @@ type ErrFeedback = Record<number, "correct" | "wrong">;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapApiResponse(apiData: any): EvalResult {
+  if (!apiData.answers || apiData.answers.length === 0) return MOCK_RESULT;
   const answer = apiData.answers?.[0];
   if (!answer) throw new Error("No answers in response");
 
@@ -584,6 +585,13 @@ export default function UPSCEvaluator() {
   const [quizAnswered, setQuizAnswered] = useState<number | null>(null);
   const [quizScore, setQuizScore] = useState({ correct: 0, total: 0 });
 
+  /* ── streaming ── */
+  const [streamTotal, setStreamTotal] = useState(0);
+  const [streamCurrent, setStreamCurrent] = useState(0);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [streamedResults, setStreamedResults] = useState<any[]>([]);
+  const cancelledRef = useRef(false);
+
   /* ── results ── */
   const [result, setResult] = useState<EvalResult | null>(null);
   const [attempts, setAttempts] = useState<Attempt[]>([]);
@@ -596,83 +604,173 @@ export default function UPSCEvaluator() {
   const [fbNote, setFbNote] = useState("");
   const [shareMsg, setShareMsg] = useState("");
 
-  /* ── loading: real API with mock fallback ── */
+  /* ── loading: real API with streaming for PDF, direct for text ── */
   useEffect(() => {
     if (screen !== "loading") return;
-    let cancelled = false;
+    cancelledRef.current = false;
 
     const delays = [400, 1200, 2400, 3800];
     const timers = delays.map((d, i) => window.setTimeout(() => setLoadingStep(i), d));
 
-    const doFetch = async () => {
-      console.log("doFetch called:", { entryTab, entryMode, hasPdf: !!pdfFile, submittedText: submittedText.slice(0, 50), submittedQuestion });
-      try {
-        let response: Response;
-
-        if (entryTab === "pdf" && pdfFile) {
-          const formData = new FormData();
-          formData.append("file", pdfFile);
-          response = await fetch("https://PranshuT-upsc-answer-evaluator.hf.space/evaluate", {
-            method: "POST",
-            body: formData,
-          });
-        } else {
-          // Temporary: wrap text as a file for the existing /evaluate endpoint
-          const blob = new Blob([submittedText], { type: "text/plain" });
-          const textFile = new File([blob], "answer.txt", { type: "text/plain" });
-          const formData = new FormData();
-          formData.append("file", textFile);
-          response = await fetch("https://PranshuT-upsc-answer-evaluator.hf.space/evaluate", {
-            method: "POST",
-            body: formData,
-          });
-        }
-
-        if (cancelled) return;
-
-        if (!response.ok) {
-          if (response.status === 404 && entryTab !== "pdf") {
-            console.warn("evaluate-text not available yet — showing sample result");
-          } else {
-            console.warn("API returned", response.status, "— using mock result");
-          }
-          const r: EvalResult = { ...MOCK_RESULT, summary: { ...MOCK_RESULT.summary } };
-          setResult(r);
-          setAttempts(prev => [...prev, { num: prev.length + 1, percentage: r.percentage, result: r }]);
-        } else {
-          const apiData = await response.json();
-          const mapped = mapApiResponse(apiData);
-
-          if (entryTab === "pdf" && apiData.answers?.[0]?.extractedText) {
-            setSubmittedText(apiData.answers[0].extractedText);
-          }
-
-          setResult(mapped);
-          setAttempts(prev => [...prev, { num: prev.length + 1, percentage: mapped.percentage, result: mapped }]);
-        }
-      } catch (err) {
-        if (cancelled) return;
-        console.error("Evaluation failed:", err);
-        const r: EvalResult = { ...MOCK_RESULT, summary: { ...MOCK_RESULT.summary } };
-        setResult(r);
-        setAttempts(prev => [...prev, { num: prev.length + 1, percentage: r.percentage, result: r }]);
-      }
-
-      if (!cancelled) {
-        setLoadingStep(4);
-        window.setTimeout(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const finishWithMock = () => {
+      const r: EvalResult = { ...MOCK_RESULT, summary: { ...MOCK_RESULT.summary } };
+      setResult(r);
+      setAttempts(prev => [...prev, { num: prev.length + 1, percentage: r.percentage, result: r }]);
+      setLoadingStep(4);
+      window.setTimeout(() => {
+        if (!cancelledRef.current) {
           setDimFb({});
           setErrFb({});
           setScreen("results");
           setResultTab("scores");
-        }, 600);
+        }
+      }, 600);
+    };
+
+    const doFetch = async () => {
+      try {
+        if (entryTab === "pdf" && pdfFile) {
+          // ── STREAMING: use /evaluate-stream for PDFs ──
+          const formData = new FormData();
+          formData.append("file", pdfFile);
+
+          const response = await fetch("https://PranshuT-upsc-answer-evaluator.hf.space/evaluate-stream", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (!response.ok || !response.body) {
+            throw new Error(`Stream failed: ${response.status}`);
+          }
+
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = "";
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const streamedAnswers: any[] = [];
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            if (cancelledRef.current) { reader.cancel(); return; }
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || "";
+
+            for (const line of lines) {
+              if (!line.startsWith("data: ")) continue;
+              const jsonStr = line.slice(6).trim();
+              if (!jsonStr) continue;
+
+              try {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const event: any = JSON.parse(jsonStr);
+
+                if (event.type === "step") {
+                  if (event.step === "ocr" && event.status === "done") setLoadingStep(0);
+                  if (event.step === "split" && event.status === "done") {
+                    setLoadingStep(1);
+                    if (event.count > 1) setStreamTotal(event.count);
+                  }
+                }
+
+                if (event.type === "answer_start") {
+                  setLoadingStep(2);
+                  setStreamCurrent(event.index);
+                }
+
+                if (event.type === "answer_done") {
+                  streamedAnswers.push(event.result);
+                  setStreamedResults([...streamedAnswers]);
+
+                  // First answer of a multi-answer PDF → show results immediately
+                  if (event.index === 0 && event.total > 1) {
+                    const partialResult = mapApiResponse({
+                      answers: streamedAnswers,
+                      summary: {
+                        percentage: event.result.evaluation?.overall_percentage || 0,
+                        strengths: [],
+                        weaknesses: [],
+                        topRecommendation: "Evaluating remaining answers...",
+                      },
+                    });
+                    setResult(partialResult);
+                    setScreen("results");
+                    setResultTab("scores");
+                  }
+                }
+
+                if (event.type === "complete") {
+                  const finalResult = mapApiResponse({
+                    answers: streamedAnswers,
+                    summary: event.summary,
+                  });
+                  setResult(finalResult);
+                  setAttempts(prev => [...prev, { num: prev.length + 1, percentage: finalResult.percentage, result: finalResult }]);
+                  if (streamedAnswers[0]?.extractedText) {
+                    setSubmittedText(streamedAnswers[0].extractedText);
+                  }
+                  setStreamTotal(0);
+                  setDimFb({});
+                  setErrFb({});
+                  // Transition to results if still on loading (single-question PDF)
+                  setScreen("results");
+                  setResultTab("scores");
+                }
+
+                if (event.type === "error") {
+                  console.error("Stream error:", event.message);
+                  throw new Error(event.message);
+                }
+              } catch (parseErr) {
+                if (parseErr instanceof SyntaxError) continue;
+                throw parseErr;
+              }
+            }
+          }
+
+        } else {
+          // ── NON-STREAMING: text evaluation ──
+          const response = await fetch("https://PranshuT-upsc-answer-evaluator.hf.space/evaluate-text", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: submittedText, question: submittedQuestion }),
+          });
+
+          if (cancelledRef.current) return;
+
+          if (!response.ok) {
+            console.warn("API returned", response.status, "— using mock result");
+            finishWithMock();
+          } else {
+            const apiData = await response.json();
+            const mapped = mapApiResponse(apiData);
+            setResult(mapped);
+            setAttempts(prev => [...prev, { num: prev.length + 1, percentage: mapped.percentage, result: mapped }]);
+            setLoadingStep(4);
+            window.setTimeout(() => {
+              if (!cancelledRef.current) {
+                setDimFb({});
+                setErrFb({});
+                setScreen("results");
+                setResultTab("scores");
+              }
+            }, 600);
+          }
+        }
+      } catch (err) {
+        if (cancelledRef.current) return;
+        console.error("Evaluation failed:", err);
+        finishWithMock();
       }
     };
 
     doFetch();
 
     return () => {
-      cancelled = true;
+      cancelledRef.current = true;
       timers.forEach(window.clearTimeout);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -718,6 +816,9 @@ export default function UPSCEvaluator() {
     setQuizAnswered(null);
     setQuizScore({ correct: 0, total: 0 });
     setLoadingStep(-1);
+    setStreamTotal(0);
+    setStreamCurrent(0);
+    setStreamedResults([]);
     setScreen("loading");
   };
 
@@ -1146,6 +1247,31 @@ export default function UPSCEvaluator() {
                     </span>
                   );
                 })}
+              </div>
+            )}
+
+            {/* Streaming progress banner */}
+            {streamTotal > 0 && streamedResults.length < streamTotal && (
+              <div style={{ padding: "12px 16px", borderRadius: 8, border: "1px solid var(--c-accent)", background: "var(--c-accent-bg)", marginBottom: 14, display: "flex", alignItems: "center", gap: 12 }}>
+                <IconSpinner size={14} />
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 13, fontWeight: 500, color: "var(--c-text)" }}>
+                    Evaluating answer {streamCurrent + 1} of {streamTotal}...
+                  </p>
+                  <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
+                    {Array.from({ length: streamTotal }, (_, i) => (
+                      <span key={i} style={{
+                        padding: "2px 8px", borderRadius: 4, fontSize: 11,
+                        fontFamily: "'JetBrains Mono',monospace",
+                        background: i < streamedResults.length ? "var(--c-green-bg)" : i === streamCurrent ? "var(--c-accent-bg)" : "var(--c-surface-hover)",
+                        color: i < streamedResults.length ? "var(--c-green)" : i === streamCurrent ? "var(--c-accent)" : "var(--c-text-tertiary)",
+                        border: `1px solid ${i < streamedResults.length ? "var(--c-green)" : i === streamCurrent ? "var(--c-accent)" : "var(--c-border)"}`,
+                      }}>
+                        Q{i + 1} {i < streamedResults.length ? "✓" : i === streamCurrent ? "●" : "○"}
+                      </span>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
 
