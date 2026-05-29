@@ -559,6 +559,7 @@ export default function UPSCEvaluator() {
     const timers = delays.map((d, i) => window.setTimeout(() => setLoadingStep(i), d));
 
     const doFetch = async () => {
+      console.log("doFetch called:", { entryTab, entryMode, hasPdf: !!pdfFile, submittedText: submittedText.slice(0, 50), submittedQuestion });
       try {
         let response: Response;
 
