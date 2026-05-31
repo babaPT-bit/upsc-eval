@@ -1069,8 +1069,8 @@ export default function UPSCEvaluator() {
             {/* Hero */}
             <div style={{ marginBottom: 32 }}>
               <p style={{ fontSize: 11, fontWeight: 600, color: "var(--c-accent)", textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: "'JetBrains Mono',monospace", marginBottom: 10 }}>AI trained on UPSC patterns</p>
-              <h1 style={{ fontFamily: "'Noto Serif',Georgia,serif", fontWeight: 700, fontSize: 28, lineHeight: 1.3, marginBottom: 10 }}>Write. Get feedback. Rewrite. Improve.</h1>
-              <p style={{ color: "var(--c-text-secondary)", fontSize: 14, lineHeight: 1.65, marginBottom: 16 }}>Scored across 7 dimensions — factual accuracy, structure, current affairs, and more.</p>
+              <h1 style={{ fontFamily: "'Noto Serif',Georgia,serif", fontWeight: 700, fontSize: 28, lineHeight: 1.3, marginBottom: 10 }}>Know exactly where your answer stands</h1>
+              <p style={{ color: "var(--c-text-secondary)", fontSize: 14, lineHeight: 1.65, marginBottom: 16 }}>Upload your answer sheet. Get your answer reviewed by an AI examiner trained on the best minds in UPSC.</p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
                 {[
                   { dot: "var(--c-green)", label: "7 scoring dimensions" },
@@ -1125,8 +1125,8 @@ export default function UPSCEvaluator() {
                     onDrop={e => { e.preventDefault(); setDragActive(false); const f = e.dataTransfer.files[0]; if (f?.type === "application/pdf") setPdfFile(f); }}
                     style={{ border: `1.5px dashed ${dragActive ? "var(--c-accent)" : "var(--c-border)"}`, borderRadius: 8, padding: "40px 24px", textAlign: "center", cursor: "pointer", background: dragActive ? "var(--c-accent-bg)" : "var(--c-surface-hover)", transition: "all 0.15s" }}>
                     <div style={{ color: "var(--c-text-tertiary)", display: "flex", justifyContent: "center", marginBottom: 10 }}><IconUpload size={24} /></div>
-                    <p style={{ fontWeight: 500, fontSize: 14, marginBottom: 4 }}>Drop your answer sheet PDF here</p>
-                    <p style={{ fontSize: 13, color: "var(--c-text-secondary)" }}>or click to browse</p>
+                    <p style={{ fontWeight: 500, fontSize: 14, marginBottom: 4 }}>Drop your answer sheet</p>
+                    <p style={{ fontSize: 13, color: "var(--c-text-secondary)" }}>or click to browse. Works with handwritten sheets.</p>
                   </div>
                 ) : (
                   <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 8, border: "1px solid var(--c-green)", background: "var(--c-green-bg)" }}>
@@ -1211,10 +1211,10 @@ export default function UPSCEvaluator() {
               <p style={{ fontSize: 11, fontWeight: 700, color: "var(--c-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: "'JetBrains Mono',monospace", marginBottom: 16 }}>How it works</p>
               <div className="walkthrough-row">
                 {([
-                  { icon: <IconUpload size={18} />, bg: "var(--c-accent)", title: "Upload or write", sub: "Any handwriting, typed PDF, or write directly in browser" },
-                  { icon: <IconBrain size={18} />, bg: "var(--c-amber)", title: "AI evaluates", sub: "Two specialist agents score your answer in under 30 seconds" },
-                  { icon: <IconBarChart size={18} />, bg: "var(--c-green)", title: "Detailed feedback", sub: "7 dimensions, factual errors caught, examiner verdict" },
-                  { icon: <IconTrendingUp size={18} />, bg: "var(--c-accent)", title: "Fix & retry", sub: "See exactly what to change, rewrite, and track your improvement" },
+                  { icon: <IconUpload size={18} />, bg: "var(--c-accent)", title: "Reads your handwriting", sub: "Even messy handwriting. We've tested it." },
+                  { icon: <IconBrain size={18} />, bg: "var(--c-amber)", title: "Examiner-grade scoring", sub: "No sugarcoating, no bias. A replica of the UPSC examiner." },
+                  { icon: <IconBarChart size={18} />, bg: "var(--c-green)", title: "Catches what you missed", sub: "Wrong date? Misquoted article? It shows up here." },
+                  { icon: <IconTrendingUp size={18} />, bg: "var(--c-accent)", title: "What to fix first", sub: "The one change that moves your score the most." },
                 ] as Array<{ icon: React.ReactNode; bg: string; title: string; sub: string }>).map((step, i, arr) => (
                   <React.Fragment key={i}>
                     <div className="walkthrough-step" style={{ padding: 16, borderRadius: 10, border: "1px solid var(--c-border)", background: "var(--c-surface)" }}>
@@ -1241,15 +1241,15 @@ export default function UPSCEvaluator() {
         ════════════════════════════════════════════════════════════════ */}
         {screen === "loading" && (
           <div style={{ animation: "upscFadeIn 0.2s ease", paddingTop: 64, paddingBottom: 48, maxWidth: 480, margin: "0 auto" }}>
-            <h2 style={{ fontFamily: "'Noto Serif',Georgia,serif", fontWeight: 600, fontSize: 22, textAlign: "center", marginBottom: 32 }}>Evaluating your answer</h2>
+            <h2 style={{ fontWeight: 500, fontSize: 15, textAlign: "center", marginBottom: 32, color: "var(--c-text)" }}>Reading through your answers</h2>
 
             {/* Step checklist */}
             <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 28 }}>
               {([
                 entryTab === "pdf" ? "Extracting text from PDF..." : "Processing your answer...",
-                "Identifying question-answer pairs...",
-                "Evaluating content and structure...",
-                "Calibrating scores...",
+                "Reading your handwriting",
+                "Finding each answer on the page",
+                "Scoring against UPSC standards",
               ]).map((step, i) => {
                 const done = loadingStep > i;
                 const active = loadingStep === i;
@@ -1372,13 +1372,14 @@ export default function UPSCEvaluator() {
             )}
 
             {/* Summary banner */}
+            <h2 style={{ fontWeight: 500, fontSize: 15, marginBottom: 12, color: "var(--c-text)" }}>Your scorecard</h2>
             <div style={{ border: "1px solid var(--c-border)", borderRadius: 10, background: "var(--c-surface)", padding: 24, marginBottom: 14, display: "flex", gap: 24, alignItems: "flex-start", flexWrap: "wrap" }}>
               <ScoreRing score={result.overallScore} max={result.maxScore} size={96} />
               <div style={{ flex: 1, minWidth: 200 }}>
                 <p style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 14, fontWeight: 700, marginBottom: 8 }}>{result.overallScore} / {result.maxScore} · {result.percentage}%</p>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 12 }}>
-                  {result.summary.strengths.map((s, i) => <span key={i} style={{ padding: "2px 8px", borderRadius: 4, fontSize: 12, background: "var(--c-green-bg)", color: "var(--c-green)", fontWeight: 500 }}>{s}</span>)}
-                  {result.summary.weaknesses.map((w, i) => <span key={i} style={{ padding: "2px 8px", borderRadius: 4, fontSize: 12, background: "var(--c-red-bg)", color: "var(--c-red)", fontWeight: 500 }}>{w}</span>)}
+                  {result.summary.strengths.map((s, i) => <span key={i} style={{ padding: "5px 11px", borderRadius: 4, fontSize: 13, background: "var(--c-green-bg)", color: "var(--c-green)", fontWeight: 500 }}>{s}</span>)}
+                  {result.summary.weaknesses.map((w, i) => <span key={i} style={{ padding: "5px 11px", borderRadius: 4, fontSize: 13, background: "var(--c-red-bg)", color: "var(--c-red)", fontWeight: 500 }}>{w}</span>)}
                 </div>
                 <div style={{ padding: "10px 14px", borderRadius: 6, background: "var(--c-accent-bg)", borderLeft: "3px solid var(--c-accent)" }}>
                   <p style={{ fontSize: 11, fontWeight: 700, color: "var(--c-accent)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 3 }}>Top Priority</p>
@@ -1412,6 +1413,8 @@ export default function UPSCEvaluator() {
             {/* ── SCORES ── */}
             {resultTab === "scores" && (
               <div style={{ animation: "upscSlideIn 0.15s ease" }}>
+                <h3 style={{ fontWeight: 500, fontSize: 15, marginBottom: 4, color: "var(--c-text)" }}>Where you scored</h3>
+                <p style={{ fontSize: 12, color: "var(--c-text-secondary)", marginBottom: 16 }}>Each bar is what an examiner checks for.</p>
                 {result.dimensions.map((dim, i) => {
                   const pct = (dim.score / dim.max) * 100;
                   const col = pctColor(pct);
@@ -1448,7 +1451,7 @@ export default function UPSCEvaluator() {
                 {result.factualErrors.length === 0 ? (
                   <div style={{ padding: 24, textAlign: "center", border: "1px solid var(--c-green)", borderRadius: 8, background: "var(--c-green-bg)" }}>
                     <div style={{ color: "var(--c-green)", display: "flex", justifyContent: "center", marginBottom: 8 }}><IconCheck size={20} /></div>
-                    <p style={{ fontWeight: 500, color: "var(--c-green)" }}>No factual errors detected</p>
+                    <p style={{ fontWeight: 500, color: "var(--c-green)" }}>No factual errors. Nice.</p>
                   </div>
                 ) : result.factualErrors.map((err, i) => {
                   const sc = err.severity === "critical" ? "var(--c-red)" : err.severity === "moderate" ? "var(--c-amber)" : "var(--c-text-tertiary)";
@@ -1485,6 +1488,8 @@ export default function UPSCEvaluator() {
 
               return (
                 <div style={{ animation: "upscSlideIn 0.15s ease" }}>
+                  <h3 style={{ fontWeight: 500, fontSize: 15, marginBottom: 4, color: "var(--c-text)" }}>How to score higher</h3>
+                  <p style={{ fontSize: 12, color: "var(--c-text-secondary)", marginBottom: 16 }}>Start with the first one. It&apos;ll make the biggest difference.</p>
                   {diffs.length > 0 ? (
                     <>
                       {/* Stats bar */}
@@ -1564,11 +1569,14 @@ export default function UPSCEvaluator() {
               const displayText = submittedText || (result as any)?.extractedText || "[No text available]";
               return (
                 <div style={{ animation: "upscSlideIn 0.15s ease", padding: 16, borderRadius: 8, background: "var(--c-surface)", border: "1px solid var(--c-border)" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                    <p style={{ fontSize: 11, fontWeight: 600, color: "var(--c-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.05em", fontFamily: "'JetBrains Mono',monospace" }}>Submitted Text</p>
-                    {diffs.length > 0 && (
-                      <span style={{ fontSize: 10, color: "var(--c-text-tertiary)", fontFamily: "'JetBrains Mono',monospace" }}>highlighted = has suggested changes</span>
-                    )}
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                      <p style={{ fontSize: 11, fontWeight: 600, color: "var(--c-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.05em", fontFamily: "'JetBrains Mono',monospace" }}>Extracted text</p>
+                      {diffs.length > 0 && (
+                        <span style={{ fontSize: 10, color: "var(--c-text-tertiary)", fontFamily: "'JetBrains Mono',monospace" }}>highlighted = has suggested changes</span>
+                      )}
+                    </div>
+                    <p style={{ fontSize: 12, color: "var(--c-text-secondary)" }}>This is what we read from your sheet. Check if anything looks off.</p>
                   </div>
                   <div style={{ fontFamily: "'JetBrains Mono',Menlo,monospace", fontSize: 12, lineHeight: 1.85, color: "var(--c-text-secondary)", whiteSpace: "pre-wrap" }}>
                     {renderHighlightedText(displayText, diffs)}
