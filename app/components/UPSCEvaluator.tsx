@@ -1084,13 +1084,14 @@ export default function UPSCEvaluator() {
             {/* Hero */}
             <div style={{ marginBottom: 32 }}>
               <p style={{ fontSize: 11, fontWeight: 600, color: "var(--c-accent)", textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: "'JetBrains Mono',monospace", marginBottom: 10 }}>AI trained on UPSC patterns</p>
-              <h1 style={{ fontFamily: "'Noto Serif',Georgia,serif", fontWeight: 700, fontSize: 28, lineHeight: 1.3, marginBottom: 10 }}>Know exactly where your answer stands</h1>
+              <h1 style={{ fontFamily: "'Noto Serif',Georgia,serif", fontWeight: 700, fontSize: 28, lineHeight: 1.3, marginBottom: 10 }}>Write. Evaluate. Improve. Score.</h1>
               <p style={{ color: "var(--c-text-secondary)", fontSize: 14, lineHeight: 1.65, marginBottom: 16 }}>Upload your answer sheet. Get your answer reviewed by an AI examiner trained on the best minds in UPSC.</p>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+              <p style={{ fontSize: 12, fontStyle: "italic", color: "var(--c-text-tertiary)", marginTop: 8, letterSpacing: "0.01em" }}>AI mapped on a decade of UPSC examiner behavior.</p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 16 }}>
                 {[
                   { dot: "var(--c-green)", label: "7 scoring dimensions" },
                   { dot: "var(--c-accent)", label: "Factual error detection" },
-                  { dot: "var(--c-amber)", label: "PYQ bank included" },
+                  { dot: "var(--c-amber)", label: "Examiner behavior modeled" },
                 ].map((pill, i) => (
                   <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 12px", borderRadius: 20, border: "1px solid var(--c-border)", background: "var(--c-surface)", fontSize: 12, color: "var(--c-text-secondary)" }}>
                     <span style={{ width: 6, height: 6, borderRadius: "50%", background: pill.dot, flexShrink: 0 }} />
