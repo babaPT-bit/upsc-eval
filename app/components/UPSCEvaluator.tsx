@@ -124,6 +124,8 @@ interface EvalResult {
   factualErrors: FactualError[];
   improvements: string[];
   summary: { strengths: string[]; weaknesses: string[]; topRecommendation: string; };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  _rawEvaluation?: any;
 }
 interface Attempt { num: number; percentage: number; result: EvalResult; }
 type DimFeedback = Record<string, "agree" | "disagree">;
@@ -208,6 +210,7 @@ function mapApiResponse(apiData: any): EvalResult {
       weaknesses: summary.weaknesses || [],
       topRecommendation: summary.topRecommendation || "",
     },
+    _rawEvaluation: answer.evaluation || {},
   };
 }
 
@@ -536,6 +539,166 @@ function NotionEditor({ onChange, resetKey = 0, placeholder = "Write your answer
         style={{ minHeight, padding: "14px 16px", fontSize: 14, lineHeight: 1.75, color: "var(--c-text)", outline: "none", fontFamily: "'Inter', sans-serif" }} />
     </div>
   );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DIFF HELPERS
+═══════════════════════════════════════════════════════════════════════════ */
+
+interface DiffItem {
+  original_text: string;
+  suggested_text: string;
+  diff_type: "replace" | "weakness";
+  dimension: string;
+  reason: string;
+}
+
+function buildDiffsFromResult(result: EvalResult): DiffItem[] {
+  const diffs: DiffItem[] = [];
+
+  // 1. Factual errors → direct replace diffs
+  for (const err of result.factualErrors) {
+    if (err.errorText && err.correction) {
+      diffs.push({
+        original_text: err.errorText,
+        suggested_text: err.correction,
+        diff_type: "replace",
+        dimension: "Factual Accuracy",
+        reason: err.whatIsWrong || "Factual correction needed",
+      });
+    }
+  }
+
+  // 2. Weak dimensions with anchor_text → weakness diffs
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const evalData: any = result._rawEvaluation || {};
+  const dimKeys = [
+    { key: "question_comprehension", name: "Question Comprehension" },
+    { key: "syllabus_alignment", name: "Syllabus Alignment" },
+    { key: "answer_structure", name: "Answer Structure" },
+    { key: "current_affairs", name: "Current Affairs" },
+    { key: "presentation", name: "Presentation" },
+  ];
+
+  for (const { key, name } of dimKeys) {
+    const dimData = evalData[key];
+    if (dimData && typeof dimData === "object" && dimData.score < 6) {
+      if (dimData.anchor_text && dimData.anchor_type === "weakness") {
+        const matchingTip = result.improvements.find(imp =>
+          imp.toLowerCase().includes(key.split("_")[0]) ||
+          imp.toLowerCase().includes(name.toLowerCase().split(" ")[0])
+        );
+        diffs.push({
+          original_text: dimData.anchor_text,
+          suggested_text: matchingTip || dimData.comment || `Improve ${name}`,
+          diff_type: "weakness",
+          dimension: name,
+          reason: dimData.comment || "",
+        });
+      }
+
+      if (key === "answer_structure") {
+        if (!dimData.has_way_forward) {
+          const lastSentence = findLastSentence(result);
+          if (lastSentence) {
+            diffs.push({
+              original_text: lastSentence,
+              suggested_text: "Add a Way Forward section here with specific, named reform recommendations (e.g., Sarkaria/Punchhi Commission recommendations).",
+              diff_type: "weakness",
+              dimension: "Answer Structure",
+              reason: "Missing 'way forward' — UPSC rewards forward-looking conclusions",
+            });
+          }
+        }
+        if (dimData.conclusion_quality === "generic" && dimData.has_conclusion) {
+          diffs.push({
+            original_text: "generic conclusion detected",
+            suggested_text: "Replace with a specific conclusion citing named reforms, committee recommendations, or policy actions.",
+            diff_type: "weakness",
+            dimension: "Answer Structure",
+            reason: "Generic conclusions like 'balanced approach is needed' lose marks",
+          });
+        }
+      }
+
+      if (key === "syllabus_alignment" && dimData.depth_markers_missing) {
+        const missing = dimData.depth_markers_missing;
+        if (Array.isArray(missing) && missing.length > 0) {
+          diffs.push({
+            original_text: dimData.anchor_text || "(insufficient depth)",
+            suggested_text: `Add specific references: ${missing.slice(0, 3).join(", ")}`,
+            diff_type: "weakness",
+            dimension: "Syllabus Alignment",
+            reason: "Adding specific Articles, cases, and committee references shifts your answer from general awareness to studied depth",
+          });
+        }
+      }
+    }
+  }
+
+  // Deduplicate by original_text
+  const seen = new Set<string>();
+  return diffs.filter(d => {
+    const k = d.original_text.toLowerCase().trim();
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  }).slice(0, 5);
+}
+
+function findLastSentence(result: EvalResult): string {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const text = (result as any).extractedText || "";
+  const sentences = text.split(/[.!?]+/).filter((s: string) => s.trim().length > 10);
+  return sentences.length > 0 ? sentences[sentences.length - 1].trim() + "." : "";
+}
+
+function renderHighlightedText(text: string, diffs: DiffItem[]) {
+  if (!text || !diffs.length) return <span>{text}</span>;
+
+  const lowerText = text.toLowerCase();
+  const highlights: Array<{ start: number; end: number; color: string; label: string }> = [];
+
+  for (const diff of diffs) {
+    if (!diff.original_text || diff.original_text.length < 5) continue;
+    const needle = diff.original_text.toLowerCase().trim();
+    const idx = lowerText.indexOf(needle);
+    if (idx !== -1) {
+      highlights.push({
+        start: idx,
+        end: idx + diff.original_text.length,
+        color: diff.diff_type === "replace" ? "var(--c-red-bg)" : "var(--c-amber-bg)",
+        label: diff.dimension,
+      });
+    }
+  }
+
+  highlights.sort((a, b) => a.start - b.start);
+
+  // Remove overlaps
+  const clean: typeof highlights = [];
+  for (const h of highlights) {
+    if (clean.length === 0 || h.start >= clean[clean.length - 1].end) clean.push(h);
+  }
+
+  if (clean.length === 0) return <span>{text}</span>;
+
+  const parts: React.ReactNode[] = [];
+  let pos = 0;
+  for (const h of clean) {
+    if (h.start > pos) parts.push(<span key={`t${pos}`}>{text.slice(pos, h.start)}</span>);
+    parts.push(
+      <span key={`h${h.start}`} title={h.label} style={{
+        background: h.color, borderRadius: 3, padding: "1px 3px",
+        borderBottom: `2px solid ${h.color === "var(--c-red-bg)" ? "var(--c-red)" : "var(--c-amber)"}`,
+      }}>
+        {text.slice(h.start, h.end)}
+      </span>
+    );
+    pos = h.end;
+  }
+  if (pos < text.length) parts.push(<span key={`t${pos}`}>{text.slice(pos)}</span>);
+  return <>{parts}</>;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -1313,28 +1476,106 @@ export default function UPSCEvaluator() {
             )}
 
             {/* ── IMPROVE ── */}
-            {resultTab === "improve" && (
-              <div style={{ animation: "upscSlideIn 0.15s ease", display: "flex", flexDirection: "column", gap: 8 }}>
-                {result.improvements.map((imp, i) => (
-                  <div key={i} style={{ display: "flex", gap: 12, padding: "12px 14px", borderRadius: 8, border: "1px solid var(--c-border)", background: "var(--c-surface)", transition: "background 0.12s" }}
-                    onMouseEnter={e => e.currentTarget.style.background = "var(--c-surface-hover)"}
-                    onMouseLeave={e => e.currentTarget.style.background = "var(--c-surface)"}>
-                    <div style={{ width: 22, height: 22, borderRadius: "50%", flexShrink: 0, background: "var(--c-accent-bg)", color: "var(--c-accent)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'JetBrains Mono',monospace", fontSize: 11, fontWeight: 700 }}>{i + 1}</div>
-                    <p style={{ fontSize: 13, color: "var(--c-text)", lineHeight: 1.6 }}>{imp}</p>
-                  </div>
-                ))}
-              </div>
-            )}
+            {resultTab === "improve" && (() => {
+              const diffs = buildDiffsFromResult(result);
+              const diffStats = diffs.length > 0 ? {
+                replacements: diffs.filter(d => d.diff_type === "replace").length,
+                weaknesses: diffs.filter(d => d.diff_type === "weakness").length,
+              } : null;
+
+              return (
+                <div style={{ animation: "upscSlideIn 0.15s ease" }}>
+                  {diffs.length > 0 ? (
+                    <>
+                      {/* Stats bar */}
+                      <div style={{ display: "flex", gap: 14, padding: "6px 0 14px", fontSize: 12, fontFamily: "'JetBrains Mono',monospace", color: "var(--c-text-tertiary)" }}>
+                        {diffStats!.replacements > 0 && (
+                          <span style={{ color: "var(--c-red)" }}>{diffStats!.replacements} correction{diffStats!.replacements > 1 ? "s" : ""}</span>
+                        )}
+                        {diffStats!.weaknesses > 0 && (
+                          <span style={{ color: "var(--c-amber)" }}>{diffStats!.weaknesses} improvement{diffStats!.weaknesses > 1 ? "s" : ""}</span>
+                        )}
+                        <span>{diffs.length} total changes</span>
+                      </div>
+
+                      {/* Diff cards */}
+                      {diffs.map((diff, i) => (
+                        <div key={i} style={{ border: "1px solid var(--c-border)", borderRadius: 8, overflow: "hidden", marginBottom: 12 }}>
+                          {/* Header */}
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "var(--c-surface-hover)", borderBottom: "1px solid var(--c-border)" }}>
+                            <span style={{
+                              fontFamily: "'JetBrains Mono',monospace", fontSize: 10, fontWeight: 700,
+                              padding: "2px 8px", borderRadius: 4, textTransform: "uppercase", letterSpacing: "0.03em",
+                              background: diff.diff_type === "replace" ? "var(--c-red-bg)" : "var(--c-amber-bg)",
+                              color: diff.diff_type === "replace" ? "var(--c-red)" : "var(--c-amber)",
+                            }}>
+                              {diff.dimension}
+                            </span>
+                            <span style={{ fontSize: 11, color: "var(--c-text-tertiary)" }}>
+                              {diff.diff_type === "replace" ? "Correction" : "Improve"}
+                            </span>
+                          </div>
+                          {/* Original — red */}
+                          <div style={{ display: "flex", gap: 8, padding: "8px 12px", background: "var(--c-red-bg)", borderLeft: "3px solid var(--c-red)" }}>
+                            <span style={{ color: "var(--c-red)", fontWeight: 700, fontSize: 13, flexShrink: 0, lineHeight: 1.65 }}>−</span>
+                            <p style={{
+                              fontSize: 13, lineHeight: 1.65, color: "var(--c-red)",
+                              textDecoration: diff.diff_type === "replace" ? "line-through" : "none",
+                              opacity: 0.85,
+                              fontFamily: diff.diff_type === "replace" ? "'Noto Serif',Georgia,serif" : "inherit",
+                              fontStyle: diff.diff_type === "replace" ? "italic" : "normal",
+                            }}>
+                              {diff.diff_type === "replace" ? `"${diff.original_text}"` : diff.original_text}
+                            </p>
+                          </div>
+                          {/* Suggested — green */}
+                          <div style={{ display: "flex", gap: 8, padding: "8px 12px", background: "var(--c-green-bg)", borderLeft: "3px solid var(--c-green)" }}>
+                            <span style={{ color: "var(--c-green)", fontWeight: 700, fontSize: 13, flexShrink: 0, lineHeight: 1.65 }}>+</span>
+                            <p style={{ fontSize: 13, lineHeight: 1.65, color: "var(--c-text)" }}>{diff.suggested_text}</p>
+                          </div>
+                          {/* Reason */}
+                          {diff.reason && (
+                            <div style={{ padding: "6px 12px 8px", borderTop: "1px solid var(--c-border)" }}>
+                              <p style={{ fontSize: 11, color: "var(--c-text-tertiary)", fontStyle: "italic", lineHeight: 1.5 }}>{diff.reason}</p>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </>
+                  ) : (
+                    /* Fallback: numbered tips */
+                    result.improvements.map((imp, i) => (
+                      <div key={i} style={{ display: "flex", gap: 12, padding: "12px 14px", borderRadius: 8, border: "1px solid var(--c-border)", background: "var(--c-surface)", marginBottom: 8, transition: "background 0.12s" }}
+                        onMouseEnter={e => e.currentTarget.style.background = "var(--c-surface-hover)"}
+                        onMouseLeave={e => e.currentTarget.style.background = "var(--c-surface)"}>
+                        <div style={{ width: 22, height: 22, borderRadius: "50%", flexShrink: 0, background: "var(--c-accent-bg)", color: "var(--c-accent)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'JetBrains Mono',monospace", fontSize: 11, fontWeight: 700 }}>{i + 1}</div>
+                        <p style={{ fontSize: 13, color: "var(--c-text)", lineHeight: 1.6 }}>{imp}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              );
+            })()}
 
             {/* ── YOUR TEXT ── */}
-            {resultTab === "text" && (
-              <div style={{ animation: "upscSlideIn 0.15s ease", padding: 16, borderRadius: 8, background: "var(--c-surface)", border: "1px solid var(--c-border)" }}>
-                <p style={{ fontSize: 11, fontWeight: 600, color: "var(--c-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 12, fontFamily: "'JetBrains Mono',monospace" }}>Submitted Text</p>
-                <p style={{ fontFamily: "'JetBrains Mono',Menlo,monospace", fontSize: 12, lineHeight: 1.85, color: "var(--c-text-secondary)", whiteSpace: "pre-wrap" }}>
-                  {submittedText || (result as EvalResult & { extractedText?: string })?.extractedText || "[No text available]"}
-                </p>
-              </div>
-            )}
+            {resultTab === "text" && (() => {
+              const diffs = buildDiffsFromResult(result);
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const displayText = submittedText || (result as any)?.extractedText || "[No text available]";
+              return (
+                <div style={{ animation: "upscSlideIn 0.15s ease", padding: 16, borderRadius: 8, background: "var(--c-surface)", border: "1px solid var(--c-border)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <p style={{ fontSize: 11, fontWeight: 600, color: "var(--c-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.05em", fontFamily: "'JetBrains Mono',monospace" }}>Submitted Text</p>
+                    {diffs.length > 0 && (
+                      <span style={{ fontSize: 10, color: "var(--c-text-tertiary)", fontFamily: "'JetBrains Mono',monospace" }}>highlighted = has suggested changes</span>
+                    )}
+                  </div>
+                  <div style={{ fontFamily: "'JetBrains Mono',Menlo,monospace", fontSize: 12, lineHeight: 1.85, color: "var(--c-text-secondary)", whiteSpace: "pre-wrap" }}>
+                    {renderHighlightedText(displayText, diffs)}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Suggested answer card */}
             {showSuggestedView && suggestedAnswer && (
