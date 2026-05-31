@@ -1604,7 +1604,9 @@ export default function UPSCEvaluator() {
             {resultTab === "text" && (() => {
               const diffs = buildDiffsFromResult(result);
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const displayText = submittedText || (result as any)?.extractedText || "[No text available]";
+              const displayText = (submittedText || (result as any)?.extractedText || "[No text available]")
+                .replace(/\*\*(.*?)\*\*/g, '$1')
+                .replace(/^#{1,3}\s*/gm, '');
               return (
                 <div style={{ animation: "upscSlideIn 0.15s ease", padding: 16, borderRadius: 8, background: "var(--c-surface)", border: "1px solid var(--c-border)" }}>
                   <div style={{ marginBottom: 12 }}>
