@@ -404,26 +404,41 @@ function IconTrendingUp({ size = 20 }: { size?: number }) {
 ═══════════════════════════════════════════════════════════════════════════ */
 
 function renderSuggestedAnswer(text: string) {
+  if (!text) return null;
   const lines = text.split("\n");
   return lines.map((line, i) => {
     const trimmed = line.trim();
-    if (!trimmed) return <div key={i} style={{ height: 8 }} />;
-    if (trimmed.startsWith("[IMPROVED]")) {
+    if (!trimmed) return <div key={i} style={{ height: 6 }} />;
+
+    const isImproved = trimmed.includes("[IMPROVED");
+    const isAdded = trimmed.includes("[ADDED");
+
+    const cleanText = trimmed
+      .replace(/\[IMPROVED[^\]]*\]/g, "")
+      .replace(/\[ADDED[^\]]*\]/g, "")
+      .replace(/^\s*[:]\s*/, "")
+      .trim();
+
+    if (!cleanText) return null;
+
+    if (isImproved) {
       return (
-        <div key={i} style={{ borderLeft: "3px solid var(--c-green)", background: "var(--c-green-bg)", borderRadius: "0 4px 4px 0", padding: "6px 12px", marginBottom: 4 }}>
-          <p style={{ fontSize: 13, lineHeight: 1.75, color: "var(--c-text)" }}>{trimmed.replace("[IMPROVED]", "").trim()}</p>
+        <div key={i} style={{ borderLeft: "3px solid var(--c-green)", background: "var(--c-green-bg)", padding: "6px 12px", borderRadius: "0 4px 4px 0", marginBottom: 4 }}>
+          <p style={{ fontSize: 13, lineHeight: 1.75, color: "var(--c-text)" }}>{cleanText}</p>
         </div>
       );
     }
-    if (trimmed.startsWith("[ADDED]")) {
+
+    if (isAdded) {
       return (
-        <div key={i} style={{ borderLeft: "3px solid var(--c-accent)", background: "var(--c-accent-bg)", borderRadius: "0 4px 4px 0", padding: "6px 12px", marginBottom: 4 }}>
-          <p style={{ fontSize: 13, lineHeight: 1.75, color: "var(--c-text)" }}>{trimmed.replace("[ADDED]", "").trim()}</p>
+        <div key={i} style={{ borderLeft: "3px solid var(--c-accent)", background: "var(--c-accent-bg)", padding: "6px 12px", borderRadius: "0 4px 4px 0", marginBottom: 4 }}>
+          <p style={{ fontSize: 13, lineHeight: 1.75, color: "var(--c-text)" }}>{cleanText}</p>
         </div>
       );
     }
+
     return (
-      <p key={i} style={{ fontSize: 13, lineHeight: 1.75, color: "var(--c-text-secondary)", marginBottom: 4 }}>{trimmed}</p>
+      <p key={i} style={{ fontSize: 13, lineHeight: 1.75, color: "var(--c-text-secondary)", marginBottom: 4 }}>{cleanText}</p>
     );
   });
 }
@@ -1578,9 +1593,15 @@ export default function UPSCEvaluator() {
                     </div>
                     <p style={{ fontSize: 12, color: "var(--c-text-secondary)" }}>This is what we read from your sheet. Check if anything looks off.</p>
                   </div>
-                  <div style={{ fontFamily: "'JetBrains Mono',Menlo,monospace", fontSize: 12, lineHeight: 1.85, color: "var(--c-text-secondary)", whiteSpace: "pre-wrap" }}>
-                    {renderHighlightedText(displayText, diffs)}
-                  </div>
+                  {(displayText.includes("[IMPROVED") || displayText.includes("[ADDED")) ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                      {renderSuggestedAnswer(displayText)}
+                    </div>
+                  ) : (
+                    <div style={{ fontFamily: "'JetBrains Mono',Menlo,monospace", fontSize: 12, lineHeight: 1.85, color: "var(--c-text-secondary)", whiteSpace: "pre-wrap" }}>
+                      {renderHighlightedText(displayText, diffs)}
+                    </div>
+                  )}
                 </div>
               );
             })()}
