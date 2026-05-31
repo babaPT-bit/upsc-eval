@@ -405,40 +405,62 @@ function IconTrendingUp({ size = 20 }: { size?: number }) {
 
 function renderSuggestedAnswer(text: string) {
   if (!text) return null;
-  const lines = text.split("\n");
+  const lines = text.split('\n');
   return lines.map((line, i) => {
-    const trimmed = line.trim();
+    let trimmed = line.trim();
     if (!trimmed) return <div key={i} style={{ height: 6 }} />;
 
-    const isImproved = trimmed.includes("[IMPROVED");
-    const isAdded = trimmed.includes("[ADDED");
+    // Detect marker type
+    const isImproved = /\[IMPROVED[^\]]*\]/.test(trimmed);
+    const isAdded = /\[ADDED[^\]]*\]/.test(trimmed);
 
-    const cleanText = trimmed
-      .replace(/\[IMPROVED[^\]]*\]/g, "")
-      .replace(/\[ADDED[^\]]*\]/g, "")
-      .replace(/^\s*[:]\s*/, "")
+    // Strip all markers
+    let clean = trimmed
+      .replace(/\[IMPROVED[^\]]*\]/g, '')
+      .replace(/\[ADDED[^\]]*\]/g, '')
+      .replace(/\[UNCHANGED[^\]]*\]/g, '')
       .trim();
 
-    if (!cleanText) return null;
+    // Strip markdown: **bold**, ## headings, # headings
+    const isHeading = /^#{1,3}\s/.test(clean);
+    clean = clean.replace(/^#{1,3}\s*/, '');
+    clean = clean.replace(/\*\*(.*?)\*\*/g, '$1');
+    clean = clean.replace(/^\*\s/, '• ');
 
+    if (!clean) return null;
+
+    // Heading style
+    if (isHeading) {
+      const borderColor = isAdded ? 'var(--c-accent)' : isImproved ? 'var(--c-green)' : 'var(--c-text-secondary)';
+      const bg = isAdded ? 'var(--c-accent-bg)' : isImproved ? 'var(--c-green-bg)' : 'transparent';
+      return (
+        <div key={i} style={{ padding: '8px 12px', marginTop: 12, marginBottom: 4, borderLeft: `3px solid ${borderColor}`, background: bg, borderRadius: '0 4px 4px 0' }}>
+          <p style={{ fontSize: 14, fontWeight: 600, fontFamily: "'Noto Serif', Georgia, serif", color: 'var(--c-text)' }}>{clean}</p>
+        </div>
+      );
+    }
+
+    // Improved line
     if (isImproved) {
       return (
-        <div key={i} style={{ borderLeft: "3px solid var(--c-green)", background: "var(--c-green-bg)", padding: "6px 12px", borderRadius: "0 4px 4px 0", marginBottom: 4 }}>
-          <p style={{ fontSize: 13, lineHeight: 1.75, color: "var(--c-text)" }}>{cleanText}</p>
+        <div key={i} style={{ borderLeft: '3px solid var(--c-green)', background: 'var(--c-green-bg)', padding: '6px 12px', borderRadius: '0 4px 4px 0', marginBottom: 3 }}>
+          <p style={{ fontSize: 13, lineHeight: 1.75, color: 'var(--c-text)' }}>{clean}</p>
         </div>
       );
     }
 
+    // Added line
     if (isAdded) {
       return (
-        <div key={i} style={{ borderLeft: "3px solid var(--c-accent)", background: "var(--c-accent-bg)", padding: "6px 12px", borderRadius: "0 4px 4px 0", marginBottom: 4 }}>
-          <p style={{ fontSize: 13, lineHeight: 1.75, color: "var(--c-text)" }}>{cleanText}</p>
+        <div key={i} style={{ borderLeft: '3px solid var(--c-accent)', background: 'var(--c-accent-bg)', padding: '6px 12px', borderRadius: '0 4px 4px 0', marginBottom: 3 }}>
+          <p style={{ fontSize: 13, lineHeight: 1.75, color: 'var(--c-text)' }}>{clean}</p>
         </div>
       );
     }
 
+    // Unchanged line — normal style
     return (
-      <p key={i} style={{ fontSize: 13, lineHeight: 1.75, color: "var(--c-text-secondary)", marginBottom: 4 }}>{cleanText}</p>
+      <p key={i} style={{ fontSize: 13, lineHeight: 1.75, color: 'var(--c-text-secondary)', marginBottom: 3, paddingLeft: 12 }}>{clean}</p>
     );
   });
 }
