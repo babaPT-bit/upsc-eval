@@ -631,104 +631,37 @@ export default function UPSCEvaluator() {
     const doFetch = async () => {
       try {
         if (entryTab === "pdf" && pdfFile) {
-          // ── STREAMING: use /evaluate-stream for PDFs ──
+          // ── PDF: regular POST to /evaluate ──
           const formData = new FormData();
           formData.append("file", pdfFile);
 
-          const response = await fetch("https://PranshuT-upsc-answer-evaluator.hf.space/evaluate-stream", {
+          const response = await fetch("https://PranshuT-upsc-answer-evaluator.hf.space/evaluate", {
             method: "POST",
             body: formData,
           });
 
-          if (!response.ok || !response.body) {
-            throw new Error(`Stream failed: ${response.status}`);
-          }
+          if (cancelledRef.current) return;
 
-          const reader = response.body.getReader();
-          const decoder = new TextDecoder();
-          let buffer = "";
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const streamedAnswers: any[] = [];
-
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            if (cancelledRef.current) { reader.cancel(); return; }
-
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split("\n");
-            buffer = lines.pop() || "";
-
-            for (const line of lines) {
-              if (!line.startsWith("data: ")) continue;
-              const jsonStr = line.slice(6).trim();
-              if (!jsonStr) continue;
-
-              try {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const event: any = JSON.parse(jsonStr);
-
-                if (event.type === "step") {
-                  if (event.step === "ocr" && event.status === "done") setLoadingStep(0);
-                  if (event.step === "split" && event.status === "done") {
-                    setLoadingStep(1);
-                    if (event.count > 1) setStreamTotal(event.count);
-                  }
-                }
-
-                if (event.type === "answer_start") {
-                  setLoadingStep(2);
-                  setStreamCurrent(event.index);
-                }
-
-                if (event.type === "answer_done") {
-                  streamedAnswers.push(event.result);
-                  setStreamedResults([...streamedAnswers]);
-
-                  // First answer of a multi-answer PDF → show results immediately
-                  if (event.index === 0 && event.total > 1) {
-                    const partialResult = mapApiResponse({
-                      answers: streamedAnswers,
-                      summary: {
-                        percentage: event.result.evaluation?.overall_percentage || 0,
-                        strengths: [],
-                        weaknesses: [],
-                        topRecommendation: "Evaluating remaining answers...",
-                      },
-                    });
-                    setResult(partialResult);
-                    setScreen("results");
-                    setResultTab("scores");
-                  }
-                }
-
-                if (event.type === "complete") {
-                  const finalResult = mapApiResponse({
-                    answers: streamedAnswers,
-                    summary: event.summary,
-                  });
-                  setResult(finalResult);
-                  setAttempts(prev => [...prev, { num: prev.length + 1, percentage: finalResult.percentage, result: finalResult }]);
-                  if (streamedAnswers[0]?.extractedText) {
-                    setSubmittedText(streamedAnswers[0].extractedText);
-                  }
-                  setStreamTotal(0);
-                  setDimFb({});
-                  setErrFb({});
-                  // Transition to results if still on loading (single-question PDF)
-                  setScreen("results");
-                  setResultTab("scores");
-                }
-
-                if (event.type === "error") {
-                  console.error("Stream error:", event.message);
-                  throw new Error(event.message);
-                }
-              } catch (parseErr) {
-                if (parseErr instanceof SyntaxError) continue;
-                throw parseErr;
-              }
+          if (!response.ok) {
+            console.warn("API returned", response.status, "— using mock result");
+            finishWithMock();
+          } else {
+            const apiData = await response.json();
+            if (apiData.answers?.[0]?.extractedText) {
+              setSubmittedText(apiData.answers[0].extractedText);
             }
+            const mapped = mapApiResponse(apiData);
+            setResult(mapped);
+            setAttempts(prev => [...prev, { num: prev.length + 1, percentage: mapped.percentage, result: mapped }]);
+            setLoadingStep(4);
+            window.setTimeout(() => {
+              if (!cancelledRef.current) {
+                setDimFb({});
+                setErrFb({});
+                setScreen("results");
+                setResultTab("scores");
+              }
+            }, 600);
           }
 
         } else {
