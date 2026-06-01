@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
+import { track } from '@vercel/analytics';
 
 /* ═══════════════════════════════════════════════════════════════════════════
    SAMPLE DATA
@@ -824,6 +825,7 @@ export default function UPSCEvaluator() {
           setErrFb({});
           setScreen("results");
           setResultTab("scores");
+          track('evaluate_completed', { percentage: r.percentage, mode: entryTab });
         }
       }, 600);
     };
@@ -860,6 +862,7 @@ export default function UPSCEvaluator() {
                 setErrFb({});
                 setScreen("results");
                 setResultTab("scores");
+                track('evaluate_completed', { percentage: mapped.percentage, mode: entryTab });
               }
             }, 600);
           }
@@ -889,6 +892,7 @@ export default function UPSCEvaluator() {
                 setErrFb({});
                 setScreen("results");
                 setResultTab("scores");
+                track('evaluate_completed', { percentage: mapped.percentage, mode: entryTab });
               }
             }, 600);
           }
@@ -935,6 +939,7 @@ export default function UPSCEvaluator() {
   const pctColor = (p: number) => p >= 75 ? "#448361" : p >= 50 ? "#C29243" : "#D44C47";
 
   const doEvaluate = () => {
+    track('evaluate_started', { mode: entryMode || 'unknown' });
     if (entryMode === "practice") {
       setSubmittedQuestion(writeQuestion);
       setSubmittedText(editorText);
@@ -971,10 +976,22 @@ export default function UPSCEvaluator() {
     if (!result) return;
     navigator.clipboard.writeText(`My UPSC Mains answer scored ${result.percentage}% (${result.overallScore}/${result.maxScore}) — evaluated by UPSCEval.`);
     setShareMsg("Copied!"); setTimeout(() => setShareMsg(""), 2000);
+    track('score_shared');
   };
 
   const doFeedbackSubmit = () => {
-    console.log("Feedback:", { stars, note: fbNote, dimFb, errFb });
+    fetch("https://PranshuT-upsc-answer-evaluator.hf.space/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        rating: stars,
+        note: fbNote,
+        score_feedback: dimFb,
+        error_feedback: errFb,
+        eval_percentage: result?.percentage || 0,
+      }),
+    }).catch(() => {});
+    track('rating_submitted', { stars });
     setShowModal(false); setStars(0); setFbNote("");
   };
 
@@ -1128,7 +1145,7 @@ export default function UPSCEvaluator() {
               {/* Upload card */}
               <button
                 className={`entry-card${entryMode === "upload" ? " active" : ""}`}
-                onClick={() => setEntryMode(entryMode === "upload" ? null : "upload")}
+                onClick={() => { const next = entryMode === "upload" ? null : "upload"; setEntryMode(next); if (next) track('entry_mode_selected', { mode: 'upload' }); }}
               >
                 <div style={{ width: 36, height: 36, borderRadius: "50%", background: entryMode === "upload" ? "var(--c-accent)" : "var(--c-accent-bg)", display: "flex", alignItems: "center", justifyContent: "center", color: entryMode === "upload" ? "#fff" : "var(--c-accent)", marginBottom: 12, transition: "background 0.15s" }}>
                   <IconUpload size={16} />
@@ -1141,7 +1158,7 @@ export default function UPSCEvaluator() {
               {/* Practice card */}
               <button
                 className={`entry-card${entryMode === "practice" ? " active" : ""}`}
-                onClick={() => setEntryMode(entryMode === "practice" ? null : "practice")}
+                onClick={() => { const next = entryMode === "practice" ? null : "practice"; setEntryMode(next); if (next) track('entry_mode_selected', { mode: 'practice' }); }}
               >
                 <div style={{ width: 36, height: 36, borderRadius: "50%", background: entryMode === "practice" ? "var(--c-green)" : "var(--c-green-bg)", display: "flex", alignItems: "center", justifyContent: "center", color: entryMode === "practice" ? "#fff" : "var(--c-green)", marginBottom: 12, transition: "background 0.15s" }}>
                   <IconPen size={16} />
@@ -1470,10 +1487,10 @@ export default function UPSCEvaluator() {
                       <p style={{ fontSize: 12, color: "var(--c-text-secondary)", lineHeight: 1.55, marginBottom: 10 }}>{dim.comment}</p>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <span style={{ fontSize: 12, color: "var(--c-text-tertiary)" }}>Agree with this score?</span>
-                        <button className={`v3-fbtn${fb === "agree" ? " agree" : ""}`} onClick={() => setDimFb(p => ({ ...p, [dim.name]: "agree" }))}>
+                        <button className={`v3-fbtn${fb === "agree" ? " agree" : ""}`} onClick={() => { setDimFb(p => ({ ...p, [dim.name]: "agree" })); track('score_feedback', { dimension: dim.name, vote: 'agree' }); }}>
                           <IconThumbUp size={12} filled={fb === "agree"} /> Yes
                         </button>
-                        <button className={`v3-fbtn${fb === "disagree" ? " disagree" : ""}`} onClick={() => setDimFb(p => ({ ...p, [dim.name]: "disagree" }))}>
+                        <button className={`v3-fbtn${fb === "disagree" ? " disagree" : ""}`} onClick={() => { setDimFb(p => ({ ...p, [dim.name]: "disagree" })); track('score_feedback', { dimension: dim.name, vote: 'disagree' }); }}>
                           <IconThumbDown size={12} filled={fb === "disagree"} /> No
                         </button>
                       </div>
@@ -1506,8 +1523,8 @@ export default function UPSCEvaluator() {
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <span style={{ fontSize: 12, color: "var(--c-text-tertiary)" }}>Is this error correct?</span>
-                          <button className={`v3-fbtn${fb === "correct" ? " agree" : ""}`} onClick={() => setErrFb(p => ({ ...p, [i]: "correct" }))}>Yes, it's wrong</button>
-                          <button className={`v3-fbtn${fb === "wrong" ? " disagree" : ""}`} onClick={() => setErrFb(p => ({ ...p, [i]: "wrong" }))}>AI is wrong here</button>
+                          <button className={`v3-fbtn${fb === "correct" ? " agree" : ""}`} onClick={() => { setErrFb(p => ({ ...p, [i]: "correct" })); track('error_feedback', { flag: 'correct' }); }}>Yes, it's wrong</button>
+                          <button className={`v3-fbtn${fb === "wrong" ? " disagree" : ""}`} onClick={() => { setErrFb(p => ({ ...p, [i]: "wrong" })); track('error_feedback', { flag: 'wrong' }); }}>AI is wrong here</button>
                         </div>
                       </div>
                     </div>
@@ -1650,7 +1667,7 @@ export default function UPSCEvaluator() {
             {/* Action row — bordered compact buttons */}
             <div style={{ marginTop: 24, display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button
-                onClick={() => setShowSuggestPrompt(p => !p)}
+                onClick={() => { setShowSuggestPrompt(p => !p); track('suggested_answer_requested'); }}
                 disabled={suggestLoading}
                 style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid var(--c-border)", background: "transparent", color: "var(--c-text-secondary)", fontSize: 13, cursor: suggestLoading ? "default" : "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center", gap: 6, opacity: suggestLoading ? 0.65 : 1 }}
                 onMouseEnter={e => { if (!suggestLoading) e.currentTarget.style.borderColor = "var(--c-text-tertiary)"; }}
@@ -1680,14 +1697,14 @@ export default function UPSCEvaluator() {
                 <p style={{ fontSize: 13, color: "var(--c-text)", lineHeight: 1.65, marginBottom: 12 }}>Want to try rewriting yourself first? You'll improve more by trying.</p>
                 <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
                   <button
-                    onClick={doRetryWrite}
+                    onClick={() => { doRetryWrite(); track('suggested_answer_choice', { choice: 'try_first' }); }}
                     style={{ background: "none", border: "none", fontSize: 13, color: "var(--c-accent)", cursor: "pointer", padding: 0, display: "inline-flex", alignItems: "center", gap: 4 }}
                     onMouseEnter={e => (e.currentTarget.style.opacity = "0.75")}
                     onMouseLeave={e => (e.currentTarget.style.opacity = "1")}>
                     Let me try first <IconArrowRight size={12} />
                   </button>
                   <button
-                    onClick={() => { setShowSuggestPrompt(false); fetchSuggestedAnswer(); }}
+                    onClick={() => { setShowSuggestPrompt(false); fetchSuggestedAnswer(); track('suggested_answer_choice', { choice: 'show_me' }); }}
                     style={{ background: "none", border: "none", fontSize: 13, color: "var(--c-text-secondary)", cursor: "pointer", padding: 0 }}
                     onMouseEnter={e => e.currentTarget.style.color = "var(--c-text)"}
                     onMouseLeave={e => e.currentTarget.style.color = "var(--c-text-secondary)"}>
