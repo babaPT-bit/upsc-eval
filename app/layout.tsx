@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Analytics } from '@vercel/analytics/next';
 
 export const metadata: Metadata = {
   title: "UPSCEval — Mains Answer Evaluator",
@@ -18,7 +19,10 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body style={{ margin: 0 }}>{children}</body>
+      <body style={{ margin: 0 }}>
+        {children}
+        <Analytics />
+      </body>
     </html>
   );
 }
