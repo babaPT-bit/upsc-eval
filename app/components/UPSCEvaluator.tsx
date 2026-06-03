@@ -802,9 +802,6 @@ export default function UPSCEvaluator() {
   const [errFb, setErrFb] = useState<ErrFeedback>({});
 
   /* ── feedback modal ── */
-  const [showModal, setShowModal] = useState(false);
-  const [stars, setStars] = useState(0);
-  const [fbNote, setFbNote] = useState("");
   const [shareMsg, setShareMsg] = useState("");
 
   /* ── loading: real API with streaming for PDF, direct for text ── */
@@ -989,21 +986,6 @@ export default function UPSCEvaluator() {
     track('score_shared');
   };
 
-  const doFeedbackSubmit = () => {
-    fetch("https://PranshuT-upsc-answer-evaluator.hf.space/feedback", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        rating: stars,
-        note: fbNote,
-        score_feedback: dimFb,
-        error_feedback: errFb,
-        eval_percentage: result?.percentage || 0,
-      }),
-    }).catch(() => {});
-    track('rating_submitted', { stars });
-    setShowModal(false); setStars(0); setFbNote("");
-  };
 
   const fetchSuggestedAnswer = async () => {
     if (!result) return;
@@ -1719,7 +1701,7 @@ export default function UPSCEvaluator() {
                 See Suggested Answer
               </button>
               <button
-                onClick={() => { track('rating_submitted', { stars: 0 }); window.open(`https://tally.so/r/WO1Llk?score=${result?.percentage ?? 0}`, '_blank'); }}
+                onClick={() => { window.open(`https://tally.so/r/WO1Llk?score=${result?.percentage ?? 0}`, '_blank'); track('rating_submitted', { stars: 0 }); }}
                 style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid var(--c-border)", background: "transparent", color: "var(--c-text-secondary)", fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
                 onMouseEnter={e => e.currentTarget.style.borderColor = "var(--c-text-tertiary)"}
                 onMouseLeave={e => e.currentTarget.style.borderColor = "var(--c-border)"}>
