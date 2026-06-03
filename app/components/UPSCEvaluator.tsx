@@ -781,6 +781,7 @@ export default function UPSCEvaluator() {
 
   /* ── loading ── */
   const [loadingStep, setLoadingStep] = useState(-1);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [dykIndex, setDykIndex] = useState(0);
   const [quizIndex, setQuizIndex] = useState(0);
   const [quizAnswered, setQuizAnswered] = useState<number | null>(null);
@@ -792,6 +793,7 @@ export default function UPSCEvaluator() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [streamedResults, setStreamedResults] = useState<any[]>([]);
   const cancelledRef = useRef(false);
+  const [evaluationError, setEvaluationError] = useState<string | null>(null);
 
   /* ── results ── */
   const [result, setResult] = useState<EvalResult | null>(null);
@@ -845,8 +847,8 @@ export default function UPSCEvaluator() {
           if (cancelledRef.current) return;
 
           if (!response.ok) {
-            console.warn("API returned", response.status, "— using mock result");
-            finishWithMock();
+            console.warn("API returned", response.status);
+            setEvaluationError(`${response.status}`);
           } else {
             const apiData = await response.json();
             if (apiData.answers?.[0]?.extractedText) {
@@ -878,8 +880,8 @@ export default function UPSCEvaluator() {
           if (cancelledRef.current) return;
 
           if (!response.ok) {
-            console.warn("API returned", response.status, "— using mock result");
-            finishWithMock();
+            console.warn("API returned", response.status);
+            setEvaluationError(`${response.status}`);
           } else {
             const apiData = await response.json();
             const mapped = mapApiResponse(apiData);
@@ -900,7 +902,7 @@ export default function UPSCEvaluator() {
       } catch (err) {
         if (cancelledRef.current) return;
         console.error("Evaluation failed:", err);
-        finishWithMock();
+        setEvaluationError("fetch_error");
       }
     };
 
@@ -930,6 +932,13 @@ export default function UPSCEvaluator() {
     return () => window.clearTimeout(timer);
   }, [screen, quizAnswered]);
 
+  /* ── elapsed timer ── */
+  useEffect(() => {
+    if (screen !== "loading") { setElapsedSeconds(0); return; }
+    const id = window.setInterval(() => setElapsedSeconds(s => s + 1), 1000);
+    return () => window.clearInterval(id);
+  }, [screen]);
+
   /* ── helpers ── */
   const canEvaluate =
     entryMode === "upload" ? !!pdfFile :
@@ -940,6 +949,7 @@ export default function UPSCEvaluator() {
 
   const doEvaluate = () => {
     track('evaluate_started', { mode: entryMode || 'unknown' });
+    setEvaluationError(null);
     if (entryMode === "practice") {
       setSubmittedQuestion(writeQuestion);
       setSubmittedText(editorText);
@@ -1091,8 +1101,8 @@ export default function UPSCEvaluator() {
       {/* ── HEADER ─────────────────────────────────────────────────────── */}
       <header style={{ borderBottom: "1px solid var(--c-border)", height: 48, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px", position: "sticky", top: 0, background: "var(--c-bg)", zIndex: 50 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 26, height: 26, borderRadius: 5, border: "1px solid var(--c-border)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Noto Serif',serif", fontWeight: 700, fontSize: 13 }}>U</div>
-          <span style={{ fontWeight: 600, fontSize: 14 }}>UPSC Evaluator</span>
+          <div style={{ width: 26, height: 26, borderRadius: 5, border: "1px solid var(--c-border)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Noto Serif',serif", fontWeight: 700, fontSize: 13 }}>A</div>
+          <span style={{ fontWeight: 600, fontSize: 14 }}>Abhyaas AI</span>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           {screen !== "entry" && (
@@ -1139,6 +1149,9 @@ export default function UPSCEvaluator() {
                 ))}
               </div>
             </div>
+
+            {/* Entry instruction */}
+            <p style={{ color: "var(--c-text-secondary)", fontSize: "0.85rem", textAlign: "center", marginBottom: 12 }}>Upload a single question-answer pair per PDF. For multiple questions, submit one at a time.</p>
 
             {/* Entry cards */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 4 }}>
@@ -1296,6 +1309,24 @@ export default function UPSCEvaluator() {
         ════════════════════════════════════════════════════════════════ */}
         {screen === "loading" && (
           <div style={{ animation: "upscFadeIn 0.2s ease", paddingTop: 64, paddingBottom: 48, maxWidth: 480, margin: "0 auto" }}>
+
+            {/* ── Error card ── */}
+            {evaluationError ? (
+              <div style={{ border: "1px solid var(--c-border)", borderRadius: 10, background: "var(--c-surface)", padding: "28px 24px" }}>
+                <p style={{ fontSize: 15, fontWeight: 500, color: "var(--c-text)", lineHeight: 1.6, marginBottom: 10 }}>
+                  Lots of aspirants evaluating right now — our free servers are at capacity.
+                </p>
+                <p style={{ fontSize: 13, color: "var(--c-text-secondary)", lineHeight: 1.65, marginBottom: 24 }}>
+                  Your answer is worth evaluating. Apologies for the inconvenience — try again in a few minutes.
+                </p>
+                <button
+                  onClick={() => { setEvaluationError(null); setScreen("entry"); }}
+                  style={{ padding: "9px 20px", borderRadius: 6, border: "none", background: "var(--c-text)", color: "var(--c-bg)", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                  Try Again
+                </button>
+              </div>
+            ) : (
+            <>
             <h2 style={{ fontWeight: 500, fontSize: 15, textAlign: "center", marginBottom: 32, color: "var(--c-text)" }}>Reading through your answers</h2>
 
             {/* Step checklist */}
@@ -1317,6 +1348,16 @@ export default function UPSCEvaluator() {
                   </div>
                 );
               })}
+            </div>
+
+            {/* Timer + status message */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              {elapsedSeconds < 90 ? (
+                <p style={{ fontSize: 12, color: "var(--c-text-secondary)" }}>Typically takes ~90 seconds</p>
+              ) : (
+                <p style={{ fontSize: 12, color: "#C29243" }}>Taking longer than usual — lots of aspirants evaluating right now</p>
+              )}
+              <span style={{ fontSize: 11, color: "var(--c-text-tertiary)", fontFamily: "'JetBrains Mono',monospace", flexShrink: 0, marginLeft: 12 }}>⏱ {elapsedSeconds}s</span>
             </div>
 
             {/* Did You Know card — always visible, auto-rotates every 5s */}
@@ -1375,6 +1416,8 @@ export default function UPSCEvaluator() {
                 </div>
               );
             })()}
+            </>
+            )}
           </div>
         )}
 
@@ -1676,7 +1719,7 @@ export default function UPSCEvaluator() {
                 See Suggested Answer
               </button>
               <button
-                onClick={() => setShowModal(true)}
+                onClick={() => { track('rating_submitted', { stars: 0 }); window.open(`https://tally.so/r/WO1Llk?score=${result?.percentage ?? 0}`, '_blank'); }}
                 style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid var(--c-border)", background: "transparent", color: "var(--c-text-secondary)", fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
                 onMouseEnter={e => e.currentTarget.style.borderColor = "var(--c-text-tertiary)"}
                 onMouseLeave={e => e.currentTarget.style.borderColor = "var(--c-border)"}>
@@ -1690,6 +1733,20 @@ export default function UPSCEvaluator() {
                 {shareMsg || "Share"}
               </button>
             </div>
+
+            {/* Early access link */}
+            <p style={{ marginTop: 14, textAlign: "center", fontSize: "0.8rem", color: "var(--c-text-secondary)" }}>
+              Enjoying Abhyaas AI?{" "}
+              <a
+                href={`https://tally.so/r/WO1Llk?score=${result?.percentage ?? 0}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: "var(--c-text-secondary)", textDecoration: "underline" }}
+                onMouseEnter={e => (e.currentTarget.style.color = "var(--c-text)")}
+                onMouseLeave={e => (e.currentTarget.style.color = "var(--c-text-secondary)")}>
+                Drop your feedback for early access to new features →
+              </a>
+            </p>
 
             {/* Inline suggest prompt */}
             {showSuggestPrompt && (
@@ -1719,35 +1776,7 @@ export default function UPSCEvaluator() {
 
       </main>
 
-      {/* ── FEEDBACK MODAL ── */}
-      {showModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: "0 24px" }}
-          onClick={e => { if (e.target === e.currentTarget) setShowModal(false); }}>
-          <div style={{ width: "100%", maxWidth: 420, borderRadius: 12, border: "1px solid var(--c-border)", background: "var(--c-surface)", padding: 28, animation: "upscSlideIn 0.15s ease" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
-              <h3 style={{ fontFamily: "'Noto Serif',Georgia,serif", fontWeight: 600, fontSize: 17 }}>How accurate was this evaluation?</h3>
-              <button onClick={() => setShowModal(false)} style={{ padding: 4, border: "none", background: "transparent", color: "var(--c-text-secondary)", cursor: "pointer", marginLeft: 8 }}><IconX size={16} /></button>
-            </div>
-            <div style={{ display: "flex", gap: 4, marginBottom: 18 }}>
-              {[1,2,3,4,5].map(n => (
-                <button key={n} onClick={() => setStars(n)} style={{ padding: 4, border: "none", background: "transparent", color: n <= stars ? "var(--c-amber)" : "var(--c-border)", cursor: "pointer", transition: "color 0.1s" }}>
-                  <IconStar size={24} filled={n <= stars} />
-                </button>
-              ))}
-            </div>
-            <textarea value={fbNote} onChange={e => setFbNote(e.target.value)}
-              placeholder="Optional: any comments on the evaluation..."
-              rows={3}
-              style={{ width: "100%", padding: "10px 12px", borderRadius: 6, border: "1px solid var(--c-border)", background: "var(--c-surface-hover)", color: "var(--c-text)", fontSize: 13, fontFamily: "inherit", resize: "vertical", outline: "none", marginBottom: 16, transition: "border-color 0.15s" }}
-              onFocus={e => e.target.style.borderColor = "var(--c-accent)"}
-              onBlur={e => e.target.style.borderColor = "var(--c-border)"} />
-            <button onClick={doFeedbackSubmit} disabled={stars === 0}
-              style={{ width: "100%", padding: "10px", borderRadius: 6, border: "none", background: stars > 0 ? "var(--c-text)" : "var(--c-border)", color: stars > 0 ? "var(--c-bg)" : "var(--c-text-tertiary)", fontSize: 14, fontWeight: 600, cursor: stars > 0 ? "pointer" : "not-allowed" }}>
-              Submit Feedback
-            </button>
-          </div>
-        </div>
-      )}
+      {/* FEEDBACK MODAL removed — Rate button now opens Tally form */}
     </div>
   );
 }

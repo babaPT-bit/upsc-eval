@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { Analytics } from '@vercel/analytics/react';
 
 export const metadata: Metadata = {
-  title: "UPSCEval — Mains Answer Evaluator",
-  description: "AI-powered UPSC Mains answer evaluation",
+  title: "Abhyaas AI — Mains Answer Evaluator",
+  description: "AI-powered UPSC Mains answer evaluation by Abhyaas AI",
 };
 
 export default function RootLayout({
