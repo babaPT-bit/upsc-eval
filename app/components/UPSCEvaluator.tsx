@@ -1114,10 +1114,9 @@ export default function UPSCEvaluator() {
 
             {/* Hero */}
             <div style={{ marginBottom: 32 }}>
-              <p style={{ fontSize: 11, fontWeight: 600, color: "var(--c-accent)", textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: "'JetBrains Mono',monospace", marginBottom: 10 }}>AI trained on UPSC patterns</p>
+              <p style={{ fontSize: 11, fontWeight: 600, color: "var(--c-accent)", textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: "'JetBrains Mono',monospace", marginBottom: 10 }}>AI mapped on a decade of UPSC examiner behavior</p>
               <h1 style={{ fontFamily: "'Noto Serif',Georgia,serif", fontWeight: 700, fontSize: 28, lineHeight: 1.3, marginBottom: 10 }}>Write. Evaluate. Improve. Score.</h1>
-              <p style={{ color: "var(--c-text-secondary)", fontSize: 14, lineHeight: 1.65, marginBottom: 16 }}>Upload your answer sheet. Get your answer reviewed by an AI examiner trained on the best minds in UPSC.</p>
-              <p style={{ fontSize: 12, fontStyle: "italic", color: "var(--c-text-tertiary)", marginTop: 8, letterSpacing: "0.01em" }}>AI mapped on a decade of UPSC examiner behavior.</p>
+              <p style={{ color: "var(--c-text-secondary)", fontSize: 14, lineHeight: 1.65, marginBottom: 16 }}>We&apos;re building a real tool for UPSC Mains prep. This is the demo — answer evaluation and practice. The full platform is coming soon.</p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 16 }}>
                 {[
                   { dot: "var(--c-green)", label: "7 scoring dimensions" },
