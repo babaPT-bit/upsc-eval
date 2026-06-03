@@ -1699,13 +1699,16 @@ export default function UPSCEvaluator() {
                 {suggestLoading && <IconSpinner size={12} />}
                 See Suggested Answer
               </button>
-              <button
-                onClick={() => { window.open(`https://tally.so/r/WO1Llk?score=${result?.percentage ?? 0}`, '_blank'); track('rating_submitted', { stars: 0 }); }}
-                style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid var(--c-border)", background: "transparent", color: "var(--c-text-secondary)", fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
+              <a
+                href={`https://tally.so/r/WO1Llk?score=${result?.percentage ?? 0}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => track('rating_submitted', { stars: 0 })}
+                style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid var(--c-border)", background: "transparent", color: "var(--c-text-secondary)", fontSize: 13, cursor: "pointer", fontFamily: "inherit", textDecoration: "none", display: "inline-block" }}
                 onMouseEnter={e => e.currentTarget.style.borderColor = "var(--c-text-tertiary)"}
                 onMouseLeave={e => e.currentTarget.style.borderColor = "var(--c-border)"}>
                 Rate
-              </button>
+              </a>
               <button
                 onClick={doShare}
                 style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid var(--c-border)", background: "transparent", color: "var(--c-text-secondary)", fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
