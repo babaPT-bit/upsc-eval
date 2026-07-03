@@ -1,0 +1,44 @@
+[
+  {
+    "date": "2026-07-01",
+    "version": "v1.4",
+    "title": "Mock Mains launched",
+    "body": "Sequential mains practice is live. Answer question by question, get evaluated after each, and track your session average. Three question sets covering GS1, GS2, and GS3.",
+    "tag": "New feature"
+  },
+  {
+    "date": "2026-06-25",
+    "version": "v1.3",
+    "title": "Mock Prelims — 20 questions, timed",
+    "body": "Practice Prelims MCQs with a 20-minute countdown. Questions span Polity, Economy, History, and Environment. Results include per-question review with explanations.",
+    "tag": "New feature"
+  },
+  {
+    "date": "2026-06-18",
+    "version": "v1.2",
+    "title": "Suggested answer improvements",
+    "body": "Suggested answers now render structured markdown — headings, bold terms, and bullet points. The 'Your Text' tab strips formatting so you can compare cleanly. Handles [UNCHANGED] sections without showing placeholder markers.",
+    "tag": "Improvement"
+  },
+  {
+    "date": "2026-06-10",
+    "version": "v1.1",
+    "title": "Error recovery and elapsed timer",
+    "body": "The evaluator now shows a clear error card on 503 or timeout errors instead of a blank state. A live elapsed timer on the loading screen manages expectations during longer evaluations.",
+    "tag": "Fix"
+  },
+  {
+    "date": "2026-06-01",
+    "version": "v1.0",
+    "title": "Abhyaas AI — public launch",
+    "body": "Launched with answer evaluation across 7 UPSC-mapped scoring dimensions, PDF upload, inline text entry, factual error detection, and suggested rewrites. Free, no signup required.",
+    "tag": "Launch"
+  },
+  {
+    "date": "2026-05-15",
+    "version": "v0.9",
+    "title": "Beta — 50-user cohort",
+    "body": "Closed beta with 50 UPSC aspirants. Incorporated feedback on rubric clarity, dimension naming, and score calibration. Evaluated 340+ answer sheets during the beta period.",
+    "tag": "Beta"
+  }
+]
