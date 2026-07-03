@@ -1,25 +1,43 @@
 import type { Metadata } from "next";
-import { Analytics } from '@vercel/analytics/react';
+import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/react";
+import "./globals.css";
+
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-display",
+  style: ["normal", "italic"],
+});
+
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-sans",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-mono",
+  weight: ["400", "500"],
+});
 
 export const metadata: Metadata = {
-  title: "Abhyaas AI — Mains Answer Evaluator",
-  description: "AI-powered UPSC Mains answer evaluation by Abhyaas AI",
+  title: "Abhyaas AI — UPSC Mains Prep",
+  description: "AI-powered UPSC Mains answer evaluation and practice. Scored across 7 dimensions, calibrated on examiner behavior. Free, no signup.",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap"
-          rel="stylesheet"
-        />
-      </head>
-      <body style={{ margin: 0 }}>{children}<Analytics /></body>
+    <html
+      lang="en"
+      className={`dark ${fraunces.variable} ${inter.variable} ${jetbrainsMono.variable}`}
+    >
+      <body>
+        {children}
+        <Analytics />
+      </body>
     </html>
   );
 }

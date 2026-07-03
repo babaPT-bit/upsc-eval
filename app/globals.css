@@ -1,26 +1,162 @@
 @import "tailwindcss";
 
+/* ─── Design Tokens ─────────────────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --font-display: 'Fraunces Variable', Georgia, serif;
+  --font-sans:    'Inter', -apple-system, sans-serif;
+  --font-mono:    'JetBrains Mono', Menlo, monospace;
+
+  --text-xs:   0.75rem;
+  --text-sm:   0.875rem;
+  --text-base: 1rem;
+  --text-lg:   1.125rem;
+  --text-xl:   1.5rem;
+  --text-2xl:  2rem;
+  --text-3xl:  2.75rem;
+  --text-4xl:  4rem;
+  --text-hero-mobile: 2.5rem;
+
+  /* Light mode */
+  --paper:      #FBF9F4;
+  --surface:    #FFFFFF;
+  --ink:        #1F1B16;
+  --ink-muted:  #6B6357;
+  --ink-faint:  #9A9180;
+  --hairline:   #E4DFD3;
+  --accent:     #A6402F;
+  --accent-ink: #FFFFFF;
+  --accent-bg:  #FDEEE9;
+  --success:    #3D5C42;
+  --success-bg: #EBF4EC;
+  --warning:    #B8863B;
+  --warning-bg: #FDF5E6;
+  --danger:     #A6402F;
+  --danger-bg:  #FDEEE9;
+
+  /* Legacy aliases — used by UPSCEvaluator inline styles (avoid mass rename) */
+  --c-bg:             var(--paper);
+  --c-surface:        var(--surface);
+  --c-surface-hover:  #F2EEE7;
+  --c-text:           var(--ink);
+  --c-text-secondary: var(--ink-muted);
+  --c-text-tertiary:  var(--ink-faint);
+  --c-border:         var(--hairline);
+  --c-border-hover:   #C8C0B4;
+  --c-accent:         var(--accent);
+  --c-accent-bg:      var(--accent-bg);
+  --c-green:          var(--success);
+  --c-green-bg:       var(--success-bg);
+  --c-amber:          var(--warning);
+  --c-amber-bg:       var(--warning-bg);
+  --c-red:            var(--danger);
+  --c-red-bg:         var(--danger-bg);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+html.dark {
+  --paper:      #171512;
+  --surface:    #201D18;
+  --ink:        #EDE8DE;
+  --ink-muted:  #9A9184;
+  --ink-faint:  #6B6357;
+  --hairline:   #322D26;
+  --accent:     #E0674F;
+  --accent-ink: #FFFFFF;
+  --accent-bg:  #2C1A16;
+  --success:    #5C8A64;
+  --success-bg: #1A2820;
+  --warning:    #D1A05C;
+  --warning-bg: #2A2218;
+  --danger:     #E0674F;
+  --danger-bg:  #2C1A16;
+
+  --c-bg:             var(--paper);
+  --c-surface:        var(--surface);
+  --c-surface-hover:  #282420;
+  --c-text:           var(--ink);
+  --c-text-secondary: var(--ink-muted);
+  --c-text-tertiary:  var(--ink-faint);
+  --c-border:         var(--hairline);
+  --c-border-hover:   #4A4440;
+  --c-accent:         var(--accent);
+  --c-accent-bg:      var(--accent-bg);
+  --c-green:          var(--success);
+  --c-green-bg:       var(--success-bg);
+  --c-amber:          var(--warning);
+  --c-amber-bg:       var(--warning-bg);
+  --c-red:            var(--danger);
+  --c-red-bg:         var(--danger-bg);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-font-smoothing: antialiased; }
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: 1.6;
 }
+
+/* ─── Utility classes ─────────────────────────────────────────────── */
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  display: block;
+  margin-bottom: 12px;
+}
+
+.site-wrap {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 32px;
+}
+
+@media (max-width: 768px) {
+  .site-wrap { padding: 0 20px; }
+}
+
+/* ─── Nav ─────────────────────────────────────────────────────────── */
+.nav-link {
+  padding: 5px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  text-decoration: none;
+  color: var(--ink-muted);
+  transition: color 0.12s;
+}
+.nav-link:hover { color: var(--ink); }
+.nav-link.active { color: var(--ink); font-weight: 500; background: var(--surface); }
+
+/* ─── Marketing sections ──────────────────────────────────────────── */
+.section { padding: 88px 0; }
+.section + .section { border-top: 1px solid var(--hairline); }
+
+@media (max-width: 768px) { .section { padding: 56px 0; } }
+
+/* ─── Comparison table ────────────────────────────────────────────── */
+.cmp-table { width: 100%; border-collapse: collapse; }
+.cmp-table th, .cmp-table td {
+  padding: 14px 20px;
+  text-align: left;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 14px;
+}
+.cmp-table th { font-size: 12px; font-family: var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-muted); font-weight: 500; }
+.cmp-table tr:nth-child(even) td { background: var(--surface); }
+
+/* ─── Blog / post list ────────────────────────────────────────────── */
+.post-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px 0;
+  border-bottom: 1px solid var(--hairline);
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.1s;
+}
+.post-row:hover { background: var(--surface); margin: 0 -16px; padding-left: 16px; padding-right: 16px; }

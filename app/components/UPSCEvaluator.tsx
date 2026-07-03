@@ -436,7 +436,7 @@ function renderSuggestedAnswer(text: string) {
       const bg = isAdded ? 'var(--c-accent-bg)' : isImproved ? 'var(--c-green-bg)' : 'transparent';
       return (
         <div key={i} style={{ padding: '8px 12px', marginTop: 12, marginBottom: 4, borderLeft: `3px solid ${borderColor}`, background: bg, borderRadius: '0 4px 4px 0' }}>
-          <p style={{ fontSize: 14, fontWeight: 600, fontFamily: "'Noto Serif', Georgia, serif", color: 'var(--c-text)' }}>{clean}</p>
+          <p style={{ fontSize: 14, fontWeight: 600, fontFamily: "var(--font-display)", color: 'var(--c-text)' }}>{clean}</p>
         </div>
       );
     }
@@ -488,7 +488,7 @@ function ScoreRing({ score, max, size = 96 }: { score: number; max: number; size
             style={{ transition: "stroke-dashoffset 1s ease" }} />
         </svg>
         <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <span style={{ fontFamily: "'Noto Serif', Georgia, serif", fontWeight: 700, fontSize: size * 0.2, color: col, lineHeight: 1 }}>{Math.round(pct)}%</span>
+          <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: size * 0.2, color: col, lineHeight: 1 }}>{Math.round(pct)}%</span>
         </div>
       </div>
       <span style={{ fontSize: 10, fontWeight: 700, color: col, fontFamily: "'JetBrains Mono', monospace", letterSpacing: "0.07em", textTransform: "uppercase" }}>{lbl}</span>
@@ -942,7 +942,7 @@ export default function UPSCEvaluator() {
     entryMode === "practice" ? (writeQuestion.trim().length > 3 && editorText.trim().length > 20) :
     false;
 
-  const pctColor = (p: number) => p >= 75 ? "#448361" : p >= 50 ? "#C29243" : "#D44C47";
+  const pctColor = (p: number) => p >= 75 ? "var(--success)" : p >= 50 ? "var(--warning)" : "var(--danger)";
 
   const doEvaluate = () => {
     track('evaluate_started', { mode: entryMode || 'unknown' });
@@ -1022,34 +1022,25 @@ export default function UPSCEvaluator() {
   };
 
   /* ── theme vars ── */
-  const themeStyle = darkMode ? {
-    "--c-bg": "#191919", "--c-surface": "#252525", "--c-surface-hover": "#2F2F2F",
-    "--c-text": "#E8E8E3", "--c-text-secondary": "#999999", "--c-text-tertiary": "#555555",
-    "--c-border": "#333333", "--c-border-hover": "#444444",
-    "--c-accent": "#529CCA", "--c-accent-bg": "#1A2940",
-    "--c-green": "#4F9768", "--c-green-bg": "#1E2B23",
-    "--c-amber": "#C29243", "--c-amber-bg": "#2A2215",
-    "--c-red": "#D44C47", "--c-red-bg": "#2E1A1A",
-  } as React.CSSProperties : {
-    "--c-bg": "#F7F7F5", "--c-surface": "#FFFFFF", "--c-surface-hover": "#F1F1EF",
-    "--c-text": "#37352F", "--c-text-secondary": "#787774", "--c-text-tertiary": "#B4B4B0",
-    "--c-border": "#E9E9E7", "--c-border-hover": "#D8D8D6",
-    "--c-accent": "#2383E2", "--c-accent-bg": "#EAF3FD",
-    "--c-green": "#448361", "--c-green-bg": "#EEF3ED",
-    "--c-amber": "#C29243", "--c-amber-bg": "#FBF3E3",
-    "--c-red": "#D44C47", "--c-red-bg": "#FDEBEA",
-  } as React.CSSProperties;
+  /* CSS vars now come from globals.css via html.dark class — no inline themeStyle needed */
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
 
   /* ── global CSS ── */
   const css = `
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
+    /* Fonts loaded via next/font in layout.tsx */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     @keyframes upscSpin { to { transform: rotate(360deg); } }
     @keyframes upscFadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
     @keyframes upscSlideIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
     button { cursor: pointer; font-family: inherit; }
     [contenteditable]:empty::before { content: attr(data-placeholder); color: var(--c-text-tertiary); pointer-events: none; }
-    [contenteditable] h3 { font-family:'Noto Serif',Georgia,serif; font-size:15px; font-weight:600; margin:10px 0 4px; }
+    [contenteditable] h3 { font-family:var(--font-display); font-size:15px; font-weight:600; margin:10px 0 4px; }
     [contenteditable] ul { padding-left:20px; margin:4px 0; }
     .v3-tab { display:flex; align-items:center; gap:6px; padding:10px 16px; background:transparent; border:none; border-bottom:2px solid transparent; font-size:13px; font-weight:500; color:var(--c-text-secondary); cursor:pointer; transition:color 0.15s, border-color 0.15s; white-space:nowrap; }
     .v3-tab.on { color:var(--c-text); border-bottom-color:var(--c-text); }
@@ -1077,13 +1068,13 @@ export default function UPSCEvaluator() {
      RENDER
   ════════════════════════════════════════════════════════════════════════ */
   return (
-    <div style={{ ...themeStyle, minHeight: "100vh", background: "var(--c-bg)", color: "var(--c-text)", fontFamily: "'Inter',-apple-system,sans-serif", fontSize: 14 }}>
+    <div style={{ minHeight: "100vh", background: "var(--paper)", color: "var(--ink)", fontFamily: "var(--font-sans)", fontSize: 14 }}>
       <style>{css}</style>
 
       {/* ── HEADER ─────────────────────────────────────────────────────── */}
       <header style={{ borderBottom: "1px solid var(--c-border)", height: 48, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px", position: "sticky", top: 0, background: "var(--c-bg)", zIndex: 50 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 26, height: 26, borderRadius: 5, border: "1px solid var(--c-border)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Noto Serif',serif", fontWeight: 700, fontSize: 13 }}>A</div>
+          <div style={{ width: 26, height: 26, borderRadius: 5, border: "1px solid var(--c-border)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 13 }}>A</div>
           <span style={{ fontWeight: 600, fontSize: 14 }}>Abhyaas AI</span>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -1115,7 +1106,7 @@ export default function UPSCEvaluator() {
             {/* Hero */}
             <div style={{ marginBottom: 32 }}>
               <p style={{ fontSize: 11, fontWeight: 600, color: "var(--c-accent)", textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: "'JetBrains Mono',monospace", marginBottom: 10 }}>AI mapped on a decade of UPSC examiner behavior</p>
-              <h1 style={{ fontFamily: "'Noto Serif',Georgia,serif", fontWeight: 700, fontSize: 28, lineHeight: 1.3, marginBottom: 10 }}>Write. Evaluate. Improve. Score.</h1>
+              <h1 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 28, lineHeight: 1.3, marginBottom: 10 }}>Write. Evaluate. Improve. Score.</h1>
               <p style={{ color: "var(--c-text-secondary)", fontSize: 14, lineHeight: 1.65, marginBottom: 16 }}>We&apos;re building a real tool for UPSC Mains prep. This is the demo — answer evaluation and practice. The full platform is coming soon.</p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 16 }}>
                 {[
@@ -1344,7 +1335,7 @@ export default function UPSCEvaluator() {
             {/* Did You Know card — always visible, auto-rotates every 5s */}
             <div key={dykIndex} style={{ animation: "upscFadeIn 0.3s ease", border: "1px solid var(--c-border)", borderRadius: 10, background: "var(--c-surface)", padding: "20px 22px", marginBottom: 12 }}>
               <p style={{ fontSize: 11, fontWeight: 700, color: "var(--c-accent)", textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: "'JetBrains Mono',monospace", marginBottom: 14 }}>Did You Know</p>
-              <p style={{ fontFamily: "'Noto Serif',Georgia,serif", fontSize: 24, fontWeight: 700, color: "var(--c-text)", lineHeight: 1.2, marginBottom: 10 }}>
+              <p style={{ fontFamily: "var(--font-display)", fontSize: 24, fontWeight: 700, color: "var(--c-text)", lineHeight: 1.2, marginBottom: 10 }}>
                 {DID_YOU_KNOW[dykIndex].big}
               </p>
               <p style={{ fontSize: 13, color: "var(--c-text-secondary)", lineHeight: 1.7, marginBottom: 14 }}>
@@ -1477,7 +1468,7 @@ export default function UPSCEvaluator() {
             {/* Examiner verdict */}
             <div style={{ borderLeft: "3px solid var(--c-amber)", padding: "14px 18px", background: "var(--c-amber-bg)", borderRadius: "0 8px 8px 0", border: "1px solid var(--c-border)", borderLeftColor: "var(--c-amber)", marginBottom: 16 }}>
               <p style={{ fontSize: 11, fontWeight: 700, color: "var(--c-amber)", textTransform: "uppercase", letterSpacing: "0.06em", fontFamily: "'JetBrains Mono',monospace", marginBottom: 8 }}>Examiner's Verdict</p>
-              <p style={{ fontFamily: "'Noto Serif',Georgia,serif", fontSize: 14, fontStyle: "italic", lineHeight: 1.75, color: "var(--c-text)" }}>{result.examinerVerdict}</p>
+              <p style={{ fontFamily: "var(--font-display)", fontSize: 14, fontStyle: "italic", lineHeight: 1.75, color: "var(--c-text)" }}>{result.examinerVerdict}</p>
             </div>
 
             {/* Result tabs */}
@@ -1539,7 +1530,7 @@ export default function UPSCEvaluator() {
                     <div key={i} style={{ borderRadius: 8, border: "1px solid var(--c-border)", borderLeft: `3px solid ${sc}`, overflow: "hidden" }}>
                       <div style={{ padding: "12px 16px", background: "var(--c-surface)" }}>
                         <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, fontWeight: 700, color: sc, textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 8 }}>{err.severity}</span>
-                        <p style={{ fontFamily: "'Noto Serif',Georgia,serif", fontStyle: "italic", fontSize: 13, color: "var(--c-red)", lineHeight: 1.6, padding: "8px 12px", background: "var(--c-red-bg)", borderRadius: 4, marginBottom: 8 }}>"{err.errorText}"</p>
+                        <p style={{ fontFamily: "var(--font-display)", fontStyle: "italic", fontSize: 13, color: "var(--c-red)", lineHeight: 1.6, padding: "8px 12px", background: "var(--c-red-bg)", borderRadius: 4, marginBottom: 8 }}>"{err.errorText}"</p>
                         <p style={{ fontSize: 12, color: "var(--c-text-secondary)", lineHeight: 1.55, marginBottom: 10 }}>{err.whatIsWrong}</p>
                         <div style={{ padding: "10px 12px", background: "var(--c-green-bg)", borderRadius: 4, marginBottom: 12 }}>
                           <p style={{ fontSize: 11, fontWeight: 700, color: "var(--c-green)", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.05em", fontFamily: "'JetBrains Mono',monospace" }}>Correction</p>
@@ -1606,7 +1597,7 @@ export default function UPSCEvaluator() {
                               fontSize: 13, lineHeight: 1.65, color: "var(--c-red)",
                               textDecoration: diff.diff_type === "replace" ? "line-through" : "none",
                               opacity: 0.85,
-                              fontFamily: diff.diff_type === "replace" ? "'Noto Serif',Georgia,serif" : "inherit",
+                              fontFamily: diff.diff_type === "replace" ? "var(--font-display)" : "inherit",
                               fontStyle: diff.diff_type === "replace" ? "italic" : "normal",
                             }}>
                               {diff.diff_type === "replace" ? `"${diff.original_text}"` : diff.original_text}
