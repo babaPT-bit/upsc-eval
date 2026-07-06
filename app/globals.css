@@ -121,14 +121,15 @@ body {
 /* ─── Nav ─────────────────────────────────────────────────────────── */
 .nav-link {
   padding: 5px 12px;
-  border-radius: 4px;
   font-size: 13px;
   text-decoration: none;
   color: var(--ink-muted);
   transition: color 0.12s;
+  border-bottom: 2px solid transparent;
+  padding-bottom: 4px;
 }
 .nav-link:hover { color: var(--ink); }
-.nav-link.active { color: var(--ink); font-weight: 500; background: var(--surface); }
+.nav-link.active { color: var(--ink); font-weight: 500; border-bottom-color: var(--accent); }
 
 /* ─── Marketing sections ──────────────────────────────────────────── */
 .section { padding: 88px 0; }

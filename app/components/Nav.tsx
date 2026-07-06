@@ -6,6 +6,7 @@ const NAV_LINKS = [
   { href: "/evaluate", label: "Evaluate" },
   { href: "/mock-prelims", label: "Mock Prelims" },
   { href: "/mock-mains", label: "Mock Mains" },
+  { href: "/progress", label: "Your progress" },
   { href: "/blog", label: "Blog" },
   { href: "/updates", label: "Updates" },
 ];
@@ -41,7 +42,7 @@ export default function Nav() {
             background: "var(--accent)", color: "var(--accent-ink)",
             fontSize: 13, fontWeight: 600, textDecoration: "none", whiteSpace: "nowrap",
           }}>
-            Start Evaluating →
+            Evaluate an answer →
           </Link>
         </div>
       </div>
