@@ -46,6 +46,13 @@ const FLAT_PYQ: Array<{ id: string; q: string; marks: number; paper: string }> =
     )
   );
 
+const WALKTHROUGH_STEPS: Array<{ Icon: (p: { size?: number }) => React.JSX.Element; bg: string; title: string; sub: string }> = [
+  { Icon: IconUpload, bg: "var(--c-accent)", title: "Reads your handwriting", sub: "Even messy handwriting. We've tested it." },
+  { Icon: IconBrain, bg: "var(--c-amber)", title: "Examiner-grade scoring", sub: "No sugarcoating, no bias. A replica of the UPSC examiner." },
+  { Icon: IconBarChart, bg: "var(--c-green)", title: "Catches what you missed", sub: "Wrong date? Misquoted article? It shows up here." },
+  { Icon: IconTrendingUp, bg: "var(--c-accent)", title: "What to fix first", sub: "The one change that moves your score the most." },
+];
+
 const DID_YOU_KNOW = [
   { big: "Article 356", fact: "President's Rule has been imposed 132 times since 1950. The most frequent decade was the 1970s with 40 impositions.", tags: ["GS2", "Polity"] },
   { big: "90 seconds", fact: "That's roughly how long a UPSC examiner spends on each answer. Your introduction and conclusion are read most carefully.", tags: ["Strategy"] },
@@ -1062,17 +1069,25 @@ export default function UPSCEvaluator() {
     .walkthrough-row::-webkit-scrollbar { display:none; }
     .walkthrough-step { scroll-snap-align:start; flex-shrink:0; min-width:150px; flex:1; }
     @media(max-width:600px) { .walkthrough-step { min-width:140px; flex:none; width:70vw; } .walkthrough-arrow { display:none; } }
+    .evaluator-shell { display:grid; grid-template-columns:minmax(0,640px) 1fr; gap:56px; align-items:start; }
+    .evaluator-side { position:sticky; top:76px; min-width:0; }
+    @media(max-width:980px) { .evaluator-shell { display:block; } .evaluator-side { position:static; margin-top:40px; } }
+    .side-step { display:flex; gap:14px; align-items:flex-start; }
+    .side-step + .side-step { margin-top:18px; }
+    .side-step-connector { width:1px; flex:1; background:var(--c-border); margin:6px 0; min-height:18px; }
   `;
 
   /* ════════════════════════════════════════════════════════════════════════
      RENDER
   ════════════════════════════════════════════════════════════════════════ */
+  const showSidebar = screen === "entry" || (screen === "loading" && !evaluationError);
+
   return (
     <div style={{ minHeight: "100vh", background: "var(--paper)", color: "var(--ink)", fontFamily: "var(--font-sans)", fontSize: 14 }}>
       <style>{css}</style>
 
       <div className="site-wrap">
-      <main style={{ maxWidth: 720, padding: 0 }}>
+      <main style={{ maxWidth: showSidebar ? 1080 : 860, padding: 0 }}>
 
         {/* Utility controls — dark mode + new answer */}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, padding: "16px 0 0" }}>
@@ -1083,6 +1098,9 @@ export default function UPSCEvaluator() {
             {darkMode ? <IconSun /> : <IconMoon />}
           </button>
         </div>
+
+        <div className={showSidebar ? "evaluator-shell" : undefined}>
+        <div>
 
         {/* ════════════════════════════════════════════════════════════════
             SCREEN 1 — ENTRY
@@ -1241,33 +1259,6 @@ export default function UPSCEvaluator() {
               </div>
             )}
 
-            {/* Step walkthrough */}
-            <div style={{ marginTop: 36 }}>
-              <p style={{ fontSize: 11, fontWeight: 700, color: "var(--c-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: "'JetBrains Mono',monospace", marginBottom: 16 }}>How it works</p>
-              <div className="walkthrough-row">
-                {([
-                  { icon: <IconUpload size={18} />, bg: "var(--c-accent)", title: "Reads your handwriting", sub: "Even messy handwriting. We've tested it." },
-                  { icon: <IconBrain size={18} />, bg: "var(--c-amber)", title: "Examiner-grade scoring", sub: "No sugarcoating, no bias. A replica of the UPSC examiner." },
-                  { icon: <IconBarChart size={18} />, bg: "var(--c-green)", title: "Catches what you missed", sub: "Wrong date? Misquoted article? It shows up here." },
-                  { icon: <IconTrendingUp size={18} />, bg: "var(--c-accent)", title: "What to fix first", sub: "The one change that moves your score the most." },
-                ] as Array<{ icon: React.ReactNode; bg: string; title: string; sub: string }>).map((step, i, arr) => (
-                  <React.Fragment key={i}>
-                    <div className="walkthrough-step" style={{ padding: 16, borderRadius: 10, border: "1px solid var(--c-border)", background: "var(--c-surface)" }}>
-                      <div style={{ width: 36, height: 36, borderRadius: "50%", background: step.bg, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", marginBottom: 12, flexShrink: 0 }}>
-                        {step.icon}
-                      </div>
-                      <p style={{ fontWeight: 600, fontSize: 13, marginBottom: 5, color: "var(--c-text)" }}>{step.title}</p>
-                      <p style={{ fontSize: 12, color: "var(--c-text-secondary)", lineHeight: 1.55 }}>{step.sub}</p>
-                    </div>
-                    {i < arr.length - 1 && (
-                      <div className="walkthrough-arrow" style={{ display: "flex", alignItems: "center", flexShrink: 0, color: "var(--c-text-tertiary)", fontSize: 16 }}>→</div>
-                    )}
-                  </React.Fragment>
-                ))}
-              </div>
-            </div>
-
-
           </div>
         )}
 
@@ -1326,66 +1317,6 @@ export default function UPSCEvaluator() {
               )}
               <span style={{ fontSize: 11, color: "var(--c-text-tertiary)", fontFamily: "'JetBrains Mono',monospace", flexShrink: 0, marginLeft: 12 }}>⏱ {elapsedSeconds}s</span>
             </div>
-
-            {/* While you wait — eyebrow + two cards */}
-            <p style={{ fontSize: 11, fontWeight: 600, color: "var(--c-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: "'JetBrains Mono',monospace", marginBottom: 12 }}>While you wait</p>
-
-            {/* Did you know card — auto-rotates every 5s */}
-            <div key={dykIndex} style={{ animation: "upscFadeIn 0.3s ease", border: "1px solid var(--c-border)", borderRadius: 10, background: "var(--c-surface)", padding: "20px 22px", marginBottom: 12 }}>
-              <p style={{ fontSize: 11, fontWeight: 700, color: "var(--c-accent)", textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: "'JetBrains Mono',monospace", marginBottom: 14 }}>Did you know</p>
-              <p style={{ fontFamily: "var(--font-display)", fontSize: 24, fontWeight: 700, color: "var(--c-text)", lineHeight: 1.2, marginBottom: 10 }}>
-                {DID_YOU_KNOW[dykIndex].big}
-              </p>
-              <p style={{ fontSize: 13, color: "var(--c-text-secondary)", lineHeight: 1.7, marginBottom: 14 }}>
-                {DID_YOU_KNOW[dykIndex].fact}
-              </p>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                {DID_YOU_KNOW[dykIndex].tags.map((tag, i) => (
-                  <span key={i} style={{ padding: "2px 8px", borderRadius: 4, background: "var(--c-accent-bg)", color: "var(--c-accent)", fontSize: 11, fontWeight: 600, fontFamily: "'JetBrains Mono',monospace" }}>{tag}</span>
-                ))}
-              </div>
-            </div>
-
-            {/* Quick Quiz card — always visible, advances after answer (3s) */}
-            {(() => {
-              const q = QUIZ_QUESTIONS[quizIndex];
-              return (
-                <div style={{ animation: "upscFadeIn 0.3s ease", border: "1px solid var(--c-border)", borderRadius: 10, background: "var(--c-surface)", padding: "20px 22px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-                    <p style={{ fontSize: 11, fontWeight: 700, color: "var(--c-amber)", textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: "'JetBrains Mono',monospace" }}>Quick quiz</p>
-                    {quizScore.total > 0 && (
-                      <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: "var(--c-text-tertiary)" }}>{quizScore.correct}/{quizScore.total} correct</span>
-                    )}
-                  </div>
-                  <p style={{ fontSize: 14, fontWeight: 500, color: "var(--c-text)", lineHeight: 1.6, marginBottom: 14 }}>{q.question}</p>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {q.options.map((opt, i) => {
-                      let bg = "var(--c-surface-hover)", borderColor = "var(--c-border)", color = "var(--c-text)";
-                      if (quizAnswered !== null) {
-                        if (i === q.correct) { bg = "var(--c-green-bg)"; borderColor = "var(--c-green)"; color = "var(--c-green)"; }
-                        else if (i === quizAnswered) { bg = "var(--c-red-bg)"; borderColor = "var(--c-red)"; color = "var(--c-red)"; }
-                      }
-                      return (
-                        <button key={i} className="quiz-opt" disabled={quizAnswered !== null}
-                          onClick={() => {
-                            if (quizAnswered !== null) return;
-                            setQuizAnswered(i);
-                            setQuizScore(s => ({ correct: s.correct + (i === q.correct ? 1 : 0), total: s.total + 1 }));
-                          }}
-                          style={{ background: bg, border: `1px solid ${borderColor}`, color }}>
-                          {opt}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {quizAnswered !== null && (
-                    <div style={{ marginTop: 14, padding: "10px 14px", borderRadius: 6, background: "var(--c-accent-bg)", borderLeft: "3px solid var(--c-accent)", animation: "upscSlideIn 0.15s ease" }}>
-                      <p style={{ fontSize: 12, color: "var(--c-text-secondary)", lineHeight: 1.65 }}>{q.explanation}</p>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
             </>
             )}
           </div>
@@ -1746,6 +1677,97 @@ export default function UPSCEvaluator() {
 
           </div>
         )}
+
+        </div>
+
+        {showSidebar && (
+          <aside className="evaluator-side">
+            {screen === "entry" && (
+              <div>
+                <p style={{ fontSize: 11, fontWeight: 700, color: "var(--c-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: "'JetBrains Mono',monospace", marginBottom: 20 }}>How it works</p>
+                {WALKTHROUGH_STEPS.map((step, i) => (
+                  <div key={i} className="side-step">
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
+                      <div style={{ width: 32, height: 32, borderRadius: "50%", background: step.bg, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", flexShrink: 0 }}>
+                        <step.Icon size={15} />
+                      </div>
+                      {i < WALKTHROUGH_STEPS.length - 1 && <div className="side-step-connector" />}
+                    </div>
+                    <div style={{ paddingBottom: i < WALKTHROUGH_STEPS.length - 1 ? 4 : 0 }}>
+                      <p style={{ fontWeight: 600, fontSize: 13, marginBottom: 4, color: "var(--c-text)" }}>{step.title}</p>
+                      <p style={{ fontSize: 12, color: "var(--c-text-secondary)", lineHeight: 1.55 }}>{step.sub}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {screen === "loading" && !evaluationError && (
+              <div>
+                <p style={{ fontSize: 11, fontWeight: 600, color: "var(--c-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: "'JetBrains Mono',monospace", marginBottom: 12 }}>While you wait</p>
+
+                {/* Did you know card — auto-rotates every 5s */}
+                <div key={dykIndex} style={{ animation: "upscFadeIn 0.3s ease", border: "1px solid var(--c-border)", borderRadius: 10, background: "var(--c-surface)", padding: "20px 22px", marginBottom: 12 }}>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: "var(--c-accent)", textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: "'JetBrains Mono',monospace", marginBottom: 14 }}>Did you know</p>
+                  <p style={{ fontFamily: "var(--font-display)", fontSize: 24, fontWeight: 700, color: "var(--c-text)", lineHeight: 1.2, marginBottom: 10 }}>
+                    {DID_YOU_KNOW[dykIndex].big}
+                  </p>
+                  <p style={{ fontSize: 13, color: "var(--c-text-secondary)", lineHeight: 1.7, marginBottom: 14 }}>
+                    {DID_YOU_KNOW[dykIndex].fact}
+                  </p>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {DID_YOU_KNOW[dykIndex].tags.map((tag, i) => (
+                      <span key={i} style={{ padding: "2px 8px", borderRadius: 4, background: "var(--c-accent-bg)", color: "var(--c-accent)", fontSize: 11, fontWeight: 600, fontFamily: "'JetBrains Mono',monospace" }}>{tag}</span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Quick Quiz card — always visible, advances after answer (3s) */}
+                {(() => {
+                  const q = QUIZ_QUESTIONS[quizIndex];
+                  return (
+                    <div style={{ animation: "upscFadeIn 0.3s ease", border: "1px solid var(--c-border)", borderRadius: 10, background: "var(--c-surface)", padding: "20px 22px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                        <p style={{ fontSize: 11, fontWeight: 700, color: "var(--c-amber)", textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: "'JetBrains Mono',monospace" }}>Quick quiz</p>
+                        {quizScore.total > 0 && (
+                          <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: "var(--c-text-tertiary)" }}>{quizScore.correct}/{quizScore.total} correct</span>
+                        )}
+                      </div>
+                      <p style={{ fontSize: 14, fontWeight: 500, color: "var(--c-text)", lineHeight: 1.6, marginBottom: 14 }}>{q.question}</p>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        {q.options.map((opt, i) => {
+                          let bg = "var(--c-surface-hover)", borderColor = "var(--c-border)", color = "var(--c-text)";
+                          if (quizAnswered !== null) {
+                            if (i === q.correct) { bg = "var(--c-green-bg)"; borderColor = "var(--c-green)"; color = "var(--c-green)"; }
+                            else if (i === quizAnswered) { bg = "var(--c-red-bg)"; borderColor = "var(--c-red)"; color = "var(--c-red)"; }
+                          }
+                          return (
+                            <button key={i} className="quiz-opt" disabled={quizAnswered !== null}
+                              onClick={() => {
+                                if (quizAnswered !== null) return;
+                                setQuizAnswered(i);
+                                setQuizScore(s => ({ correct: s.correct + (i === q.correct ? 1 : 0), total: s.total + 1 }));
+                              }}
+                              style={{ background: bg, border: `1px solid ${borderColor}`, color }}>
+                              {opt}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {quizAnswered !== null && (
+                        <div style={{ marginTop: 14, padding: "10px 14px", borderRadius: 6, background: "var(--c-accent-bg)", borderLeft: "3px solid var(--c-accent)", animation: "upscSlideIn 0.15s ease" }}>
+                          <p style={{ fontSize: 12, color: "var(--c-text-secondary)", lineHeight: 1.65 }}>{q.explanation}</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+          </aside>
+        )}
+
+        </div>
 
       </main>
       </div>
