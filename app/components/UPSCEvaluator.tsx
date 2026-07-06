@@ -120,6 +120,8 @@ const MOCK_RESULT: EvalResult = {
 type Screen = "entry" | "loading" | "results";
 type EntryTab = "pyq" | "write" | "pdf";
 type ResultTab = "scores" | "errors" | "improve" | "text";
+type PaperType = "GS1" | "GS2" | "GS3" | "GS4" | "Essay";
+type MarksType = 10 | 15 | 20;
 
 interface PYQItem { id: string; q: string; marks: number; }
 interface Dimension { name: string; weight: string; score: number; max: number; comment: string; }
@@ -777,6 +779,10 @@ export default function UPSCEvaluator() {
   const [editorKey, setEditorKey] = useState(0);
   const [writeQuestion, setWriteQuestion] = useState("");
 
+  /* ── paper + marks (optional, nudged) ── */
+  const [selectedPaper, setSelectedPaper] = useState<PaperType | null>(null);
+  const [selectedMarks, setSelectedMarks] = useState<MarksType | null>(null);
+
   /* ── PDF ── */
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -875,10 +881,14 @@ export default function UPSCEvaluator() {
 
         } else {
           // ── NON-STREAMING: text evaluation ──
+          const textBody: Record<string, unknown> = { text: submittedText, question: submittedQuestion };
+          if (selectedPaper) textBody.paper = selectedPaper;
+          if (selectedMarks) textBody.marks = selectedMarks;
+
           const response = await fetch("https://PranshuT-upsc-answer-evaluator.hf.space/evaluate-text", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: submittedText, question: submittedQuestion }),
+            body: JSON.stringify(textBody),
           });
 
           if (cancelledRef.current) return;
@@ -1063,6 +1073,9 @@ export default function UPSCEvaluator() {
     .entry-card { text-align:left; padding:18px 18px 16px; border-radius:10px; border:1px solid var(--c-border); background:var(--c-surface); cursor:pointer; transition:border-color 0.15s, background 0.15s; }
     .entry-card:hover { border-color:var(--c-border-hover); }
     .entry-card.active { border-color:var(--c-accent); background:var(--c-accent-bg); }
+    .v3-chip { padding:6px 12px; border-radius:6px; border:1px solid var(--c-border); background:var(--c-surface); color:var(--c-text-secondary); font-size:12px; font-weight:500; font-family:inherit; cursor:pointer; transition:border-color 0.15s, background 0.15s, color 0.15s; white-space:nowrap; }
+    .v3-chip:hover { border-color:var(--c-border-hover); color:var(--c-text); }
+    .v3-chip.on { border-color:var(--c-accent); background:var(--c-accent-bg); color:var(--c-accent); }
     .quiz-opt { text-align:left; padding:10px 14px; border-radius:6px; font-size:13px; font-family:inherit; cursor:pointer; transition:all 0.15s; }
     .quiz-opt:disabled { cursor:default; }
     .walkthrough-row { display:flex; gap:12px; align-items:stretch; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
@@ -1245,6 +1258,31 @@ export default function UPSCEvaluator() {
 
                 {/* Editor — always visible */}
                 <NotionEditor key={`practice-${editorKey}`} onChange={(h, t) => { setEditorHtml(h); setEditorText(t); }} placeholder="Write your answer here..." />
+
+                {/* Paper + marks — optional, nudged */}
+                <div style={{ marginTop: 18, paddingTop: 16, borderTop: "1px solid var(--c-border)" }}>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 24 }}>
+                    <div>
+                      <p style={{ fontSize: 11, fontWeight: 600, color: "var(--c-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>Paper</p>
+                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                        <button type="button" className={`v3-chip${selectedPaper === null ? " on" : ""}`} onClick={() => setSelectedPaper(null)}>Auto-detect</button>
+                        {(["GS1", "GS2", "GS3", "GS4", "Essay"] as PaperType[]).map(p => (
+                          <button type="button" key={p} className={`v3-chip${selectedPaper === p ? " on" : ""}`} onClick={() => setSelectedPaper(p)}>{p}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p style={{ fontSize: 11, fontWeight: 600, color: "var(--c-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>Marks</p>
+                      <div style={{ display: "flex", gap: 4 }}>
+                        <button type="button" className={`v3-chip${selectedMarks === null ? " on" : ""}`} onClick={() => setSelectedMarks(null)}>Auto</button>
+                        {([10, 15, 20] as MarksType[]).map(m => (
+                          <button type="button" key={m} className={`v3-chip${selectedMarks === m ? " on" : ""}`} onClick={() => setSelectedMarks(m)}>{m}</button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <p style={{ fontSize: 12, color: "var(--c-text-tertiary)", marginTop: 10 }}>Tell us the paper for sharper, paper-specific feedback.</p>
+                </div>
               </div>
             )}
 
