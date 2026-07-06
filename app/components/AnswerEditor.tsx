@@ -24,17 +24,18 @@ export default function AnswerEditor({
   return (
     <div>
       {/* Mode tabs */}
-      <div style={{ display: "flex", gap: 4, marginBottom: 16 }}>
+      <div style={{ display: "flex", gap: 0, marginBottom: 16, borderBottom: "1px solid var(--hairline)" }}>
         {(["type", "upload"] as AnswerMode[]).map(m => (
           <button
             key={m}
             onClick={() => onModeChange(m)}
             style={{
-              padding: "6px 14px",
-              borderRadius: 4,
-              border: `1px solid ${mode === m ? "var(--accent)" : "var(--hairline)"}`,
-              background: mode === m ? "color-mix(in srgb, var(--accent) 10%, transparent)" : "transparent",
-              color: mode === m ? "var(--accent)" : "var(--ink-muted)",
+              padding: "8px 16px 9px",
+              border: "none",
+              borderBottom: `2px solid ${mode === m ? "var(--accent)" : "transparent"}`,
+              marginBottom: -1,
+              background: "transparent",
+              color: mode === m ? "var(--ink)" : "var(--ink-muted)",
               fontSize: 13,
               fontFamily: "inherit",
               cursor: "pointer",

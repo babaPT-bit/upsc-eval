@@ -1,3 +1,5 @@
+import Nav from "../components/Nav";
+import Footer from "../components/Footer";
 import UPSCEvaluator from "../components/UPSCEvaluator";
 
 export const metadata = {
@@ -6,5 +8,11 @@ export const metadata = {
 };
 
 export default function EvaluatePage() {
-  return <UPSCEvaluator />;
+  return (
+    <>
+      <Nav />
+      <UPSCEvaluator />
+      <Footer />
+    </>
+  );
 }

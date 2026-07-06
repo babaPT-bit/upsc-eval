@@ -1071,23 +1071,17 @@ export default function UPSCEvaluator() {
     <div style={{ minHeight: "100vh", background: "var(--paper)", color: "var(--ink)", fontFamily: "var(--font-sans)", fontSize: 14 }}>
       <style>{css}</style>
 
-      {/* ── HEADER ─────────────────────────────────────────────────────── */}
-      <header style={{ borderBottom: "1px solid var(--c-border)", height: 48, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px", position: "sticky", top: 0, background: "var(--c-bg)", zIndex: 50 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 26, height: 26, borderRadius: 5, border: "1px solid var(--c-border)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 13 }}>A</div>
-          <span style={{ fontWeight: 600, fontSize: 14 }}>Abhyaas AI</span>
-        </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+      <main style={{ maxWidth: 720, padding: "0 32px" }}>
+
+        {/* Utility controls — dark mode + new answer */}
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, padding: "16px 0 0" }}>
           {screen !== "entry" && (
-            <button onClick={() => setScreen("entry")} style={{ padding: "5px 12px", borderRadius: 6, border: "1px solid var(--c-border)", background: "transparent", fontSize: 13, color: "var(--c-text-secondary)", transition: "border-color 0.15s" }} onMouseEnter={e => e.currentTarget.style.borderColor = "var(--c-text-tertiary)"} onMouseLeave={e => e.currentTarget.style.borderColor = "var(--c-border)"}>New answer</button>
+            <button onClick={() => setScreen("entry")} style={{ padding: "5px 12px", borderRadius: 4, border: "1px solid var(--c-border)", background: "transparent", fontSize: 13, color: "var(--c-text-secondary)", fontFamily: "inherit" }}>New answer</button>
           )}
-          <button onClick={() => setDarkMode(d => !d)} style={{ width: 32, height: 32, borderRadius: 6, border: "1px solid var(--c-border)", background: "transparent", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--c-text-secondary)", transition: "border-color 0.15s" }} onMouseEnter={e => e.currentTarget.style.borderColor = "var(--c-text-tertiary)"} onMouseLeave={e => e.currentTarget.style.borderColor = "var(--c-border)"}>
+          <button onClick={() => setDarkMode(d => !d)} style={{ width: 32, height: 32, borderRadius: 4, border: "1px solid var(--c-border)", background: "transparent", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--c-text-secondary)" }}>
             {darkMode ? <IconSun /> : <IconMoon />}
           </button>
         </div>
-      </header>
-
-      <main style={{ maxWidth: 720, margin: "0 auto", padding: "0 24px" }}>
 
         {/* ════════════════════════════════════════════════════════════════
             SCREEN 1 — ENTRY
@@ -1123,7 +1117,7 @@ export default function UPSCEvaluator() {
             </div>
 
             {/* Entry instruction */}
-            <p style={{ color: "var(--c-text-secondary)", fontSize: "0.85rem", textAlign: "center", marginBottom: 12 }}>Upload a single question-answer pair per PDF. For multiple questions, submit one at a time.</p>
+            <p style={{ color: "var(--c-text-secondary)", fontSize: "0.85rem", marginBottom: 12 }}>Upload a single question-answer pair per PDF. For multiple questions, submit one at a time.</p>
 
             {/* Entry cards */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 4 }}>
@@ -1135,8 +1129,8 @@ export default function UPSCEvaluator() {
                 <div style={{ width: 36, height: 36, borderRadius: "50%", background: entryMode === "upload" ? "var(--c-accent)" : "var(--c-accent-bg)", display: "flex", alignItems: "center", justifyContent: "center", color: entryMode === "upload" ? "#fff" : "var(--c-accent)", marginBottom: 12, transition: "background 0.15s" }}>
                   <IconUpload size={16} />
                 </div>
-                <p style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>Upload Answer Sheet</p>
-                <p style={{ fontSize: 12, color: "var(--c-text-secondary)", lineHeight: 1.5, marginBottom: 10 }}>Evaluate a handwritten or typed PDF answer sheet.</p>
+                <p style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>Upload a photo</p>
+                <p style={{ fontSize: 12, color: "var(--c-text-secondary)", lineHeight: 1.5, marginBottom: 10 }}>Reads your handwriting and scores it.</p>
                 <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 4, background: "var(--c-accent-bg)", color: "var(--c-accent)", fontSize: 11, fontWeight: 600, fontFamily: "'JetBrains Mono',monospace" }}>Reads handwriting</span>
               </button>
 
@@ -1148,8 +1142,8 @@ export default function UPSCEvaluator() {
                 <div style={{ width: 36, height: 36, borderRadius: "50%", background: entryMode === "practice" ? "var(--c-green)" : "var(--c-green-bg)", display: "flex", alignItems: "center", justifyContent: "center", color: entryMode === "practice" ? "#fff" : "var(--c-green)", marginBottom: 12, transition: "background 0.15s" }}>
                   <IconPen size={16} />
                 </div>
-                <p style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>Practice Here</p>
-                <p style={{ fontSize: 12, color: "var(--c-text-secondary)", lineHeight: 1.5, marginBottom: 10 }}>Type your answer in the browser — choose from PYQ bank or write your own question.</p>
+                <p style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>Type your answer</p>
+                <p style={{ fontSize: 12, color: "var(--c-text-secondary)", lineHeight: 1.5, marginBottom: 10 }}>Write in the browser — pick from the PYQ bank or enter your own question.</p>
                 <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 4, background: "var(--c-green-bg)", color: "var(--c-green)", fontSize: 11, fontWeight: 600, fontFamily: "'JetBrains Mono',monospace" }}>No PDF needed</span>
               </button>
             </div>
@@ -1239,10 +1233,10 @@ export default function UPSCEvaluator() {
             {entryMode !== null && (
               <div style={{ marginTop: 20 }}>
                 <button onClick={doEvaluate} disabled={!canEvaluate}
-                  style={{ width: "100%", padding: "11px 24px", borderRadius: 6, border: "none", background: canEvaluate ? "var(--c-text)" : "var(--c-border)", color: canEvaluate ? "var(--c-bg)" : "var(--c-text-tertiary)", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, cursor: canEvaluate ? "pointer" : "not-allowed", transition: "background 0.15s, color 0.15s" }}>
-                  Evaluate My Answer <IconArrowRight />
+                  style={{ padding: "11px 28px", borderRadius: 4, border: "none", background: canEvaluate ? "var(--c-text)" : "var(--c-border)", color: canEvaluate ? "var(--c-bg)" : "var(--c-text-tertiary)", fontSize: 14, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 8, cursor: canEvaluate ? "pointer" : "not-allowed", transition: "background 0.15s, color 0.15s" }}>
+                  Evaluate answer <IconArrowRight />
                 </button>
-                <p style={{ textAlign: "center", marginTop: 10, fontSize: 12, color: "var(--c-text-tertiary)" }}>Free. No signup. No limits.</p>
+                <p style={{ marginTop: 10, fontSize: 12, color: "var(--c-text-tertiary)" }}>Free. No signup. No limits.</p>
               </div>
             )}
 
@@ -1280,7 +1274,7 @@ export default function UPSCEvaluator() {
             SCREEN 2 — LOADING
         ════════════════════════════════════════════════════════════════ */}
         {screen === "loading" && (
-          <div style={{ animation: "upscFadeIn 0.2s ease", paddingTop: 64, paddingBottom: 48, maxWidth: 480, margin: "0 auto" }}>
+          <div style={{ animation: "upscFadeIn 0.2s ease", paddingTop: 48, paddingBottom: 48, maxWidth: 480 }}>
 
             {/* ── Error card ── */}
             {evaluationError ? (
@@ -1299,7 +1293,7 @@ export default function UPSCEvaluator() {
               </div>
             ) : (
             <>
-            <h2 style={{ fontWeight: 500, fontSize: 15, textAlign: "center", marginBottom: 32, color: "var(--c-text)" }}>Reading through your answers</h2>
+            <h2 style={{ fontWeight: 500, fontSize: 15, marginBottom: 32, color: "var(--c-text)" }}>Reading through your answers</h2>
 
             {/* Step checklist */}
             <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 28 }}>
@@ -1332,9 +1326,12 @@ export default function UPSCEvaluator() {
               <span style={{ fontSize: 11, color: "var(--c-text-tertiary)", fontFamily: "'JetBrains Mono',monospace", flexShrink: 0, marginLeft: 12 }}>⏱ {elapsedSeconds}s</span>
             </div>
 
-            {/* Did You Know card — always visible, auto-rotates every 5s */}
+            {/* While you wait — eyebrow + two cards */}
+            <p style={{ fontSize: 11, fontWeight: 600, color: "var(--c-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.1em", fontFamily: "'JetBrains Mono',monospace", marginBottom: 12 }}>While you wait</p>
+
+            {/* Did you know card — auto-rotates every 5s */}
             <div key={dykIndex} style={{ animation: "upscFadeIn 0.3s ease", border: "1px solid var(--c-border)", borderRadius: 10, background: "var(--c-surface)", padding: "20px 22px", marginBottom: 12 }}>
-              <p style={{ fontSize: 11, fontWeight: 700, color: "var(--c-accent)", textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: "'JetBrains Mono',monospace", marginBottom: 14 }}>Did You Know</p>
+              <p style={{ fontSize: 11, fontWeight: 700, color: "var(--c-accent)", textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: "'JetBrains Mono',monospace", marginBottom: 14 }}>Did you know</p>
               <p style={{ fontFamily: "var(--font-display)", fontSize: 24, fontWeight: 700, color: "var(--c-text)", lineHeight: 1.2, marginBottom: 10 }}>
                 {DID_YOU_KNOW[dykIndex].big}
               </p>
@@ -1354,7 +1351,7 @@ export default function UPSCEvaluator() {
               return (
                 <div style={{ animation: "upscFadeIn 0.3s ease", border: "1px solid var(--c-border)", borderRadius: 10, background: "var(--c-surface)", padding: "20px 22px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-                    <p style={{ fontSize: 11, fontWeight: 700, color: "var(--c-amber)", textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: "'JetBrains Mono',monospace" }}>Quick Quiz</p>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: "var(--c-amber)", textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: "'JetBrains Mono',monospace" }}>Quick quiz</p>
                     {quizScore.total > 0 && (
                       <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: "var(--c-text-tertiary)" }}>{quizScore.correct}/{quizScore.total} correct</span>
                     )}
@@ -1448,8 +1445,8 @@ export default function UPSCEvaluator() {
               <div style={{ flex: 1, minWidth: 200 }}>
                 <p style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 14, fontWeight: 700, marginBottom: 8 }}>{result.overallScore} / {result.maxScore} · {result.percentage}%</p>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 12 }}>
-                  {result.summary.strengths.map((s, i) => <span key={i} style={{ padding: "5px 11px", borderRadius: 4, fontSize: 13, background: "var(--c-green-bg)", color: "var(--c-green)", fontWeight: 500 }}>{s}</span>)}
-                  {result.summary.weaknesses.map((w, i) => <span key={i} style={{ padding: "5px 11px", borderRadius: 4, fontSize: 13, background: "var(--c-red-bg)", color: "var(--c-red)", fontWeight: 500 }}>{w}</span>)}
+                  {result.summary.strengths.map((s, i) => <span key={i} style={{ padding: "4px 10px", borderRadius: 4, fontSize: 12, background: "transparent", border: "1px solid var(--c-green)", color: "var(--c-green)", fontWeight: 500 }}>{s}</span>)}
+                  {result.summary.weaknesses.map((w, i) => <span key={i} style={{ padding: "4px 10px", borderRadius: 4, fontSize: 12, background: "transparent", border: "1px solid var(--c-red)", color: "var(--c-red)", fontWeight: 500 }}>{w}</span>)}
                 </div>
                 <div style={{ padding: "10px 14px", borderRadius: 6, background: "var(--c-accent-bg)", borderLeft: "3px solid var(--c-accent)" }}>
                   <p style={{ fontSize: 11, fontWeight: 700, color: "var(--c-accent)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 3 }}>Top Priority</p>
@@ -1466,14 +1463,14 @@ export default function UPSCEvaluator() {
             </div>
 
             {/* Examiner verdict */}
-            <div style={{ borderLeft: "3px solid var(--c-amber)", padding: "14px 18px", background: "var(--c-amber-bg)", borderRadius: "0 8px 8px 0", border: "1px solid var(--c-border)", borderLeftColor: "var(--c-amber)", marginBottom: 16 }}>
-              <p style={{ fontSize: 11, fontWeight: 700, color: "var(--c-amber)", textTransform: "uppercase", letterSpacing: "0.06em", fontFamily: "'JetBrains Mono',monospace", marginBottom: 8 }}>Examiner's Verdict</p>
+            <div style={{ borderLeft: "3px solid var(--c-amber)", padding: "14px 18px", background: "var(--c-surface)", borderRadius: "0 8px 8px 0", marginBottom: 16 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, color: "var(--c-amber)", textTransform: "uppercase", letterSpacing: "0.06em", fontFamily: "'JetBrains Mono',monospace", marginBottom: 8 }}>Examiner&apos;s verdict</p>
               <p style={{ fontFamily: "var(--font-display)", fontSize: 14, fontStyle: "italic", lineHeight: 1.75, color: "var(--c-text)" }}>{result.examinerVerdict}</p>
             </div>
 
             {/* Result tabs */}
             <div style={{ display: "flex", borderBottom: "1px solid var(--c-border)", marginBottom: 16 }}>
-              {([{ id: "scores" as ResultTab, label: "Scores" }, { id: "errors" as ResultTab, label: `Errors (${result.factualErrors.length})` }, { id: "improve" as ResultTab, label: `Improve (${result.improvements.length})` }, { id: "text" as ResultTab, label: "Your Text" }]).map(t => (
+              {([{ id: "scores" as ResultTab, label: "Score" }, { id: "errors" as ResultTab, label: `Corrections (${result.factualErrors.length})` }, { id: "improve" as ResultTab, label: `What to fix (${result.improvements.length})` }, { id: "text" as ResultTab, label: "Your answer" }]).map(t => (
                 <button key={t.id} className={`v3-tab${resultTab === t.id ? " on" : ""}`} onClick={() => setResultTab(t.id)}>
                   <span className="v3-tab-label">{t.label}</span>
                 </button>
@@ -1519,9 +1516,9 @@ export default function UPSCEvaluator() {
             {resultTab === "errors" && (
               <div style={{ animation: "upscSlideIn 0.15s ease", display: "flex", flexDirection: "column", gap: 10 }}>
                 {result.factualErrors.length === 0 ? (
-                  <div style={{ padding: 24, textAlign: "center", border: "1px solid var(--c-green)", borderRadius: 8, background: "var(--c-green-bg)" }}>
-                    <div style={{ color: "var(--c-green)", display: "flex", justifyContent: "center", marginBottom: 8 }}><IconCheck size={20} /></div>
-                    <p style={{ fontWeight: 500, color: "var(--c-green)" }}>No factual errors. Nice.</p>
+                  <div style={{ padding: "20px 24px", border: "1px solid var(--c-border)", borderLeft: "3px solid var(--c-green)", borderRadius: "0 8px 8px 0", background: "var(--c-surface)", display: "flex", alignItems: "center", gap: 12 }}>
+                    <span style={{ color: "var(--c-green)", flexShrink: 0 }}><IconCheck size={16} /></span>
+                    <p style={{ fontSize: 14, fontWeight: 500, color: "var(--c-green)" }}>No factual errors detected.</p>
                   </div>
                 ) : result.factualErrors.map((err, i) => {
                   const sc = err.severity === "critical" ? "var(--c-red)" : err.severity === "moderate" ? "var(--c-amber)" : "var(--c-text-tertiary)";
@@ -1688,7 +1685,7 @@ export default function UPSCEvaluator() {
                 onMouseEnter={e => { if (!suggestLoading) e.currentTarget.style.borderColor = "var(--c-text-tertiary)"; }}
                 onMouseLeave={e => e.currentTarget.style.borderColor = "var(--c-border)"}>
                 {suggestLoading && <IconSpinner size={12} />}
-                See Suggested Answer
+                Model answer
               </button>
               <a
                 href={`https://tally.so/r/WO1Llk?score=${result?.percentage ?? 0}`}
@@ -1698,19 +1695,19 @@ export default function UPSCEvaluator() {
                 style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid var(--c-border)", background: "transparent", color: "var(--c-text-secondary)", fontSize: 13, cursor: "pointer", fontFamily: "inherit", textDecoration: "none", display: "inline-block" }}
                 onMouseEnter={e => e.currentTarget.style.borderColor = "var(--c-text-tertiary)"}
                 onMouseLeave={e => e.currentTarget.style.borderColor = "var(--c-border)"}>
-                Rate
+                Rate this feedback
               </a>
               <button
                 onClick={doShare}
                 style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid var(--c-border)", background: "transparent", color: "var(--c-text-secondary)", fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}
                 onMouseEnter={e => e.currentTarget.style.borderColor = "var(--c-text-tertiary)"}
                 onMouseLeave={e => e.currentTarget.style.borderColor = "var(--c-border)"}>
-                {shareMsg || "Share"}
+                {shareMsg || "Share result"}
               </button>
             </div>
 
             {/* Early access link */}
-            <p style={{ marginTop: 14, textAlign: "center", fontSize: "0.8rem", color: "var(--c-text-secondary)" }}>
+            <p style={{ marginTop: 14, fontSize: "0.8rem", color: "var(--c-text-secondary)" }}>
               Enjoying Abhyaas AI?{" "}
               <a
                 href={`https://tally.so/r/WO1Llk?score=${result?.percentage ?? 0}`}

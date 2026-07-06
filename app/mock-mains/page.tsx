@@ -1,7 +1,7 @@
 "use client";
 import { useState, useCallback } from "react";
-import Link from "next/link";
 import Nav from "../components/Nav";
+import Footer from "../components/Footer";
 import CountdownTimer from "../components/CountdownTimer";
 import AnswerEditor, { AnswerMode } from "../components/AnswerEditor";
 import EvalResultCard, { mapToEvalResult, EvalResultData } from "../components/EvalResultCard";
@@ -124,8 +124,6 @@ export default function MockMainsPage() {
       <div style={{ minHeight: "100vh", background: "var(--paper)", color: "var(--ink)" }}>
         <Nav />
         <div className="site-wrap" style={{ paddingTop: 64, paddingBottom: 96 }}>
-          <Link href="/" style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--ink-muted)", textDecoration: "none", display: "inline-block", marginBottom: 40 }}>← Back to Abhyaas AI</Link>
-
           <span className="eyebrow">Mock Mains</span>
           <h1 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "var(--text-3xl)", letterSpacing: "-0.02em", marginBottom: 8 }}>
             Sequential mains practice
@@ -161,6 +159,7 @@ export default function MockMainsPage() {
             })}
           </div>
         </div>
+        <Footer />
       </div>
     );
   }
@@ -220,6 +219,7 @@ export default function MockMainsPage() {
             </button>
           </div>
         </div>
+        <Footer />
       </div>
     );
   }
@@ -231,8 +231,8 @@ export default function MockMainsPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--paper)", color: "var(--ink)" }}>
-      {/* Sticky progress header */}
-      <div style={{ position: "sticky", top: 0, zIndex: 50, background: "var(--paper)", borderBottom: "1px solid var(--hairline)" }}>
+      {/* Sticky progress header — sits below the global Nav (52px) */}
+      <div style={{ position: "sticky", top: 52, zIndex: 40, background: "var(--paper)", borderBottom: "1px solid var(--hairline)" }}>
         <div className="site-wrap" style={{ display: "flex", alignItems: "center", gap: 16, height: 52 }}>
           <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--ink-muted)", whiteSpace: "nowrap" }}>
             <strong style={{ color: "var(--ink)" }}>{currentIdx + 1}</strong> / {selectedSet.questions.length}

@@ -1,7 +1,7 @@
 "use client";
 import { useState, useCallback } from "react";
-import Link from "next/link";
 import Nav from "../components/Nav";
+import Footer from "../components/Footer";
 import CountdownTimer from "../components/CountdownTimer";
 import prelimsData from "../../content/mock-prelims-questions.json";
 
@@ -166,6 +166,7 @@ export default function MockPrelimsPage() {
             </button>
           </div>
         </div>
+        <Footer />
       </div>
     );
   }
@@ -179,7 +180,7 @@ export default function MockPrelimsPage() {
 
     return (
       <div style={{ minHeight: "100vh", background: "var(--paper)", color: "var(--ink)" }}>
-        <div style={{ position: "sticky", top: 0, zIndex: 50, background: "var(--paper)", borderBottom: "1px solid var(--hairline)" }}>
+        <div style={{ position: "sticky", top: 52, zIndex: 40, background: "var(--paper)", borderBottom: "1px solid var(--hairline)" }}>
           <div className="site-wrap" style={{ display: "flex", alignItems: "center", gap: 16, height: 52 }}>
             <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--ink-muted)", whiteSpace: "nowrap" }}>
               <strong style={{ color: "var(--ink)" }}>{currentIdx + 1}</strong> / {questions.length}
@@ -254,8 +255,6 @@ export default function MockPrelimsPage() {
     <div style={{ minHeight: "100vh", background: "var(--paper)", color: "var(--ink)" }}>
       <Nav />
       <div className="site-wrap" style={{ paddingTop: 64, paddingBottom: 96, maxWidth: 560 }}>
-        <Link href="/" style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--ink-muted)", textDecoration: "none", display: "inline-block", marginBottom: 40 }}>← Back to Abhyaas AI</Link>
-
         <span className="eyebrow">Mock Prelims</span>
         <h1 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "var(--text-3xl)", letterSpacing: "-0.02em", marginBottom: 8 }}>
           Timed MCQ practice
@@ -266,17 +265,19 @@ export default function MockPrelimsPage() {
         </p>
 
         <div style={{ marginBottom: 32 }}>
-          <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-faint)", marginBottom: 12 }}>Filter by subject</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-faint)", marginBottom: 0 }}>Filter by subject</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 0, borderBottom: "1px solid var(--hairline)" }}>
             {ALL_SUBJECTS.map(s => (
               <button
                 key={s}
                 onClick={() => setSubjectFilter(s)}
                 style={{
-                  padding: "6px 14px", borderRadius: 4,
-                  border: `1px solid ${subjectFilter === s ? "var(--accent)" : "var(--hairline)"}`,
-                  background: subjectFilter === s ? "color-mix(in srgb, var(--accent) 10%, transparent)" : "transparent",
-                  color: subjectFilter === s ? "var(--accent)" : "var(--ink-muted)",
+                  padding: "10px 14px 11px",
+                  border: "none",
+                  borderBottom: `2px solid ${subjectFilter === s ? "var(--accent)" : "transparent"}`,
+                  marginBottom: -1,
+                  background: "transparent",
+                  color: subjectFilter === s ? "var(--ink)" : "var(--ink-muted)",
                   fontSize: 13, cursor: "pointer", fontFamily: "inherit",
                   fontWeight: subjectFilter === s ? 500 : 400,
                 }}
@@ -305,6 +306,7 @@ export default function MockPrelimsPage() {
           Start Test →
         </button>
       </div>
+      <Footer />
     </div>
   );
 }
