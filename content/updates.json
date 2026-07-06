@@ -1,5 +1,12 @@
 [
   {
+    "date": "2026-07-06",
+    "version": "v1.5",
+    "title": "Mock Prelims + Mock Mains rebuilt with real data",
+    "body": "Both practice modes now load from real question banks. Mock Prelims: 15 questions adapted from UPSC 2023/2024 PYQs, subject filter, shared countdown timer, per-question review with explanations. Mock Mains: five question sets (GS1–GS4 + Essay), per-question timer seeded from question mark weight, shared CountdownTimer and AnswerEditor components.",
+    "tag": "New feature"
+  },
+  {
     "date": "2026-07-01",
     "version": "v1.4",
     "title": "Mock Mains launched",

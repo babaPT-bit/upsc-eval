@@ -1,8 +1,13 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useCallback } from "react";
+import Link from "next/link";
 import Nav from "../components/Nav";
+import CountdownTimer from "../components/CountdownTimer";
+import prelimsData from "../../content/mock-prelims-questions.json";
 
+/* ── Types ──────────────────────────────────────────────────────────────── */
 interface Question {
+  id: string;
   question: string;
   options: string[];
   correct: number;
@@ -10,272 +15,294 @@ interface Question {
   subject: string;
 }
 
-const QUESTIONS: Question[] = [
-  { subject: "Polity", question: "The ___ Committee recommended the creation of an All India Judicial Service.", options: ["Sarkaria Commission", "Law Commission (14th Report)", "Swaran Singh Committee", "Punchhi Commission"], correct: 1, explanation: "The Law Commission in its 14th Report (1958) recommended an All India Judicial Service for the subordinate judiciary." },
-  { subject: "Polity", question: "Which Article empowers the President to declare a Financial Emergency?", options: ["Article 352", "Article 356", "Article 360", "Article 365"], correct: 2, explanation: "Article 360 deals with Financial Emergency. It has never been proclaimed in India so far." },
-  { subject: "Polity", question: "The Panchayati Raj system was constitutionalized by which Amendment?", options: ["71st Amendment", "72nd Amendment", "73rd Amendment", "74th Amendment"], correct: 2, explanation: "The 73rd Amendment (1992) added Part IX to the Constitution, establishing a three-tier Panchayati Raj system." },
-  { subject: "Polity", question: "Who appoints the Chief Election Commissioner of India?", options: ["Prime Minister", "President", "Chief Justice of India", "Parliament"], correct: 1, explanation: "Article 324(2) — the President appoints the CEC. Since 2023, a committee recommends the appointment." },
-  { subject: "Polity", question: "Which schedule of the Constitution deals with anti-defection provisions?", options: ["8th Schedule", "9th Schedule", "10th Schedule", "11th Schedule"], correct: 2, explanation: "The 10th Schedule, added by the 52nd Amendment Act (1985), contains anti-defection provisions." },
-  { subject: "Polity", question: "The concept of 'Basic Structure' of the Constitution was established in which case?", options: ["Golaknath v. State of Punjab", "Kesavananda Bharati v. State of Kerala", "Minerva Mills v. Union of India", "Maneka Gandhi v. Union of India"], correct: 1, explanation: "Kesavananda Bharati (1973) established that Parliament cannot alter the basic structure of the Constitution." },
-  { subject: "Polity", question: "Which Article of the Constitution deals with the Right to Education?", options: ["Article 21", "Article 21A", "Article 22", "Article 23"], correct: 1, explanation: "Article 21A, inserted by the 86th Amendment (2002), makes free and compulsory education for children aged 6-14 a Fundamental Right." },
-  { subject: "Polity", question: "The Directive Principles of State Policy are contained in which Part of the Constitution?", options: ["Part III", "Part IV", "Part IVA", "Part V"], correct: 1, explanation: "Part IV (Articles 36-51) contains the Directive Principles of State Policy, borrowed from the Irish Constitution." },
-  { subject: "Polity", question: "Which constitutional body can remove the Chief Election Commissioner from office?", options: ["President alone", "Parliament through impeachment", "Supreme Court", "Cabinet recommendation"], correct: 1, explanation: "The CEC can only be removed through impeachment by Parliament — same procedure as removal of a Supreme Court judge." },
-  { subject: "Polity", question: "The term 'Secular' was added to the Preamble of the Constitution by which Amendment?", options: ["42nd Amendment", "44th Amendment", "52nd Amendment", "61st Amendment"], correct: 0, explanation: "The 42nd Amendment Act (1976) added 'Secular' and 'Socialist' to the Preamble during the Emergency." },
-  { subject: "Governance", question: "Under Article 356, President's Rule can be extended beyond one year only if:", options: ["The Rajya Sabha passes a resolution", "A national emergency is in operation", "The State Legislative Assembly approves", "The Supreme Court certifies it"], correct: 1, explanation: "President's Rule can be extended beyond 1 year only if a national emergency is in operation in the whole of India or the EC certifies difficulty in holding elections." },
-  { subject: "Governance", question: "Which committee recommended the 'three-language formula' for Indian education?", options: ["Kothari Commission", "Mudaliar Commission", "Radhakrishnan Commission", "Yashpal Committee"], correct: 0, explanation: "The Kothari Commission (1964-66) recommended the three-language formula — mother tongue/regional language, Hindi, and English/another modern Indian language." },
-  { subject: "Governance", question: "The National Green Tribunal (NGT) was established under which Act?", options: ["Environment Protection Act, 1986", "National Green Tribunal Act, 2010", "Forest Conservation Act, 1980", "Wildlife Protection Act, 1972"], correct: 1, explanation: "The NGT was established under the National Green Tribunal Act, 2010. India is the third country in the world to have a dedicated environmental tribunal." },
-  { subject: "Governance", question: "Which Article of the Constitution empowers Parliament to form new states?", options: ["Article 1", "Article 2", "Article 3", "Article 4"], correct: 2, explanation: "Article 3 empowers Parliament, by law, to form new states, increase/decrease areas, and alter names and boundaries of existing states." },
-  { subject: "International Relations", question: "The BRICS grouping was originally called BRIC — when was South Africa added?", options: ["2009", "2010", "2011", "2013"], correct: 2, explanation: "South Africa formally joined at the Sanya Summit in 2011, expanding BRIC to BRICS." },
-  { subject: "Governance", question: "Which organ of the UN has its headquarters in Nairobi?", options: ["UNCTAD", "UNEP", "UNESCO", "UNICEF"], correct: 1, explanation: "UNEP (UN Environment Programme) is headquartered in Nairobi, Kenya — the only major UN agency with HQ in the developing world." },
-  { subject: "Polity", question: "The Comptroller and Auditor General of India is appointed by:", options: ["Prime Minister", "President", "Parliament", "Finance Commission"], correct: 1, explanation: "The CAG is appointed by the President under Article 148 and can be removed only through an address by both Houses of Parliament." },
-  { subject: "Governance", question: "Which Article grants the Supreme Court jurisdiction to hear appeals from High Courts in constitutional matters?", options: ["Article 131", "Article 132", "Article 136", "Article 142"], correct: 1, explanation: "Article 132 grants appellate jurisdiction to the Supreme Court in constitutional matters — an appeal lies if the HC certifies it involves a substantial question of law as to interpretation of the Constitution." },
-  { subject: "Polity", question: "How many fundamental duties are currently listed in the Constitution?", options: ["9", "10", "11", "12"], correct: 2, explanation: "There are 11 Fundamental Duties — 10 added by the 42nd Amendment (1976) and 1 more added by the 86th Amendment (2002)." },
-  { subject: "Governance", question: "The National Human Rights Commission (NHRC) was established under which Act?", options: ["Human Rights Protection Act, 1990", "Protection of Human Rights Act, 1993", "Fundamental Rights Protection Act, 1995", "Constitutional Rights Act, 1988"], correct: 1, explanation: "The NHRC was established in 1993 under the Protection of Human Rights Act, 1993. The chairperson must be a retired Chief Justice of India." },
-];
+type Phase = "setup" | "test" | "results";
 
-const TOTAL_TIME = 20 * 60; // 20 minutes in seconds
+/* ── Helpers ─────────────────────────────────────────────────────────────── */
+const ALL_SUBJECTS = ["All", ...Array.from(new Set((prelimsData.questions as Question[]).map(q => q.subject))).sort()];
 
-function formatTime(secs: number) {
-  const m = Math.floor(secs / 60).toString().padStart(2, "0");
-  const s = (secs % 60).toString().padStart(2, "0");
-  return `${m}:${s}`;
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 }
 
-type Screen = "select" | "test" | "results";
-
+/* ── Component ───────────────────────────────────────────────────────────── */
 export default function MockPrelimsPage() {
-  const [screen, setScreen] = useState<Screen>("select");
-  const [currentQ, setCurrentQ] = useState(0);
-  const [answers, setAnswers] = useState<(number | null)[]>(Array(QUESTIONS.length).fill(null));
-  const [timeLeft, setTimeLeft] = useState(TOTAL_TIME);
-  const [elapsed, setElapsed] = useState(0);
-  const [startTime, setStartTime] = useState(0);
-  const [expandedReview, setExpandedReview] = useState<number | null>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [phase, setPhase] = useState<Phase>("setup");
+  const [subjectFilter, setSubjectFilter] = useState("All");
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const [answers, setAnswers] = useState<Record<string, number | null>>({});
+  const [timedOut, setTimedOut] = useState(false);
+  const [totalSeconds, setTotalSeconds] = useState(0);
+  const [timerKey, setTimerKey] = useState(0);
 
-  const startTest = () => {
-    setScreen("test");
-    setCurrentQ(0);
-    setAnswers(Array(QUESTIONS.length).fill(null));
-    setTimeLeft(TOTAL_TIME);
-    setElapsed(0);
-    setStartTime(Date.now());
+  const handleStart = () => {
+    const pool = subjectFilter === "All"
+      ? (prelimsData.questions as Question[])
+      : (prelimsData.questions as Question[]).filter(q => q.subject === subjectFilter);
+    const selected = shuffle(pool);
+    const secs = selected.length * prelimsData.meta.default_time_per_question_seconds;
+    setQuestions(selected);
+    setAnswers(Object.fromEntries(selected.map(q => [q.id, null])));
+    setCurrentIdx(0);
+    setTimedOut(false);
+    setTotalSeconds(secs);
+    setTimerKey(k => k + 1);
+    setPhase("test");
   };
 
-  useEffect(() => {
-    if (screen !== "test") {
-      if (timerRef.current) clearInterval(timerRef.current);
-      return;
-    }
-    timerRef.current = setInterval(() => {
-      setTimeLeft(t => {
-        if (t <= 1) {
-          clearInterval(timerRef.current!);
-          setElapsed(TOTAL_TIME);
-          setScreen("results");
-          return 0;
-        }
-        return t - 1;
-      });
-    }, 1000);
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [screen]);
+  const handleExpire = useCallback(() => {
+    setTimedOut(true);
+    setPhase("results");
+  }, []);
 
-  const selectAnswer = (optIdx: number) => {
-    setAnswers(prev => {
-      const next = [...prev];
-      next[currentQ] = optIdx;
-      return next;
+  const selectOption = (qId: string, idx: number) => {
+    setAnswers(prev => ({ ...prev, [qId]: idx }));
+  };
+
+  const submit = () => setPhase("results");
+
+  /* ── Results ─────────────────────────────────────────────────────────── */
+  if (phase === "results") {
+    const correct = questions.filter(q => answers[q.id] === q.correct).length;
+    const pct = questions.length > 0 ? Math.round((correct / questions.length) * 100) : 0;
+    const pctColor = pct >= 67 ? "var(--success)" : pct >= 40 ? "var(--warning)" : "var(--danger)";
+
+    const bySubject: Record<string, { attempted: number; correct: number }> = {};
+    questions.forEach(q => {
+      if (!bySubject[q.subject]) bySubject[q.subject] = { attempted: 0, correct: 0 };
+      if (answers[q.id] !== null) bySubject[q.subject].attempted++;
+      if (answers[q.id] === q.correct) bySubject[q.subject].correct++;
     });
-  };
 
-  const goNext = () => {
-    if (currentQ < QUESTIONS.length - 1) {
-      setCurrentQ(q => q + 1);
-    } else {
-      setElapsed(TOTAL_TIME - timeLeft);
-      if (timerRef.current) clearInterval(timerRef.current);
-      setScreen("results");
-    }
-  };
-
-  const correct = answers.filter((a, i) => a === QUESTIONS[i].correct).length;
-  const pct = Math.round((correct / QUESTIONS.length) * 100);
-  const answered = answers.filter(a => a !== null).length;
-
-  /* ── SELECT SCREEN ─────────────────────────────────────────────────── */
-  if (screen === "select") {
     return (
       <div style={{ minHeight: "100vh", background: "var(--paper)", color: "var(--ink)" }}>
         <Nav />
-        <div className="site-wrap" style={{ paddingTop: 64, paddingBottom: 96 }}>
-          <span className="eyebrow">Mock Prelims</span>
-          <h1 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "var(--text-3xl)", letterSpacing: "-0.02em", marginBottom: 12 }}>
-            Prelims practice, one question at a time
-          </h1>
-          <p style={{ color: "var(--ink-muted)", fontSize: 15, lineHeight: 1.7, marginBottom: 48, maxWidth: 520 }}>
-            Question-by-question MCQ practice with an answer key built on real PYQ patterns. Timed, scored, reviewed.
-          </p>
+        <div className="site-wrap" style={{ paddingTop: 48, paddingBottom: 96, maxWidth: 680 }}>
+          <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-muted)", marginBottom: 8 }}>
+            {timedOut ? "Time's up — " : ""}Results
+          </div>
 
-          <div style={{ border: "1px solid var(--hairline)", borderRadius: 6, background: "var(--surface)", maxWidth: 480 }}>
-            <div style={{ padding: "24px 24px 20px", borderBottom: "1px solid var(--hairline)" }}>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-muted)", marginBottom: 8 }}>Available sets</div>
-              <div style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 18, color: "var(--ink)", marginBottom: 4 }}>GS2 Polity — 20 Questions</div>
-              <div style={{ fontSize: 13, color: "var(--ink-muted)" }}>Constitutional provisions, governance, polity. 20 minutes.</div>
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 20, marginBottom: 32, paddingBottom: 32, borderBottom: "1px solid var(--hairline)" }}>
+            <span style={{ fontFamily: "var(--font-display)", fontSize: 64, fontWeight: 700, lineHeight: 1, color: pctColor }}>{pct}%</span>
+            <div style={{ paddingBottom: 8 }}>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: 18, color: "var(--ink-muted)" }}>{correct} / {questions.length}</div>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-faint)" }}>correct</div>
             </div>
-            <div style={{ padding: "16px 24px", display: "flex", alignItems: "center", gap: 24 }}>
-              <div style={{ display: "flex", gap: 20 }}>
-                {[["20", "questions"], ["20 min", "time limit"], ["GS2", "paper"]].map(([num, label]) => (
-                  <div key={label}>
-                    <div style={{ fontFamily: "var(--font-mono)", fontWeight: 500, fontSize: 15, color: "var(--ink)" }}>{num}</div>
-                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-faint)" }}>{label}</div>
+          </div>
+
+          {Object.keys(bySubject).length > 1 && (
+            <div style={{ marginBottom: 40 }}>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-faint)", marginBottom: 14 }}>By subject</div>
+              {Object.entries(bySubject).map(([subj, { attempted, correct: c }]) => {
+                const sp = attempted > 0 ? Math.round((c / attempted) * 100) : 0;
+                return (
+                  <div key={subj} style={{ marginBottom: 10 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                      <span style={{ fontSize: 13, color: "var(--ink-muted)" }}>{subj}</span>
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ink-faint)" }}>{c}/{attempted}</span>
+                    </div>
+                    <div style={{ height: 3, background: "var(--hairline)", borderRadius: 2 }}>
+                      <div style={{ height: "100%", width: `${sp}%`, background: sp >= 67 ? "var(--success)" : sp >= 40 ? "var(--warning)" : "var(--danger)", borderRadius: 2, transition: "width 0.4s" }} />
+                    </div>
                   </div>
-                ))}
-              </div>
-              <button
-                onClick={startTest}
-                style={{ marginLeft: "auto", padding: "10px 20px", borderRadius: 4, background: "var(--accent)", color: "var(--accent-ink)", fontSize: 14, fontWeight: 600, border: "none", cursor: "pointer", fontFamily: "inherit" }}
-              >
-                Start Test →
-              </button>
+                );
+              })}
             </div>
+          )}
+
+          <div style={{ marginBottom: 40 }}>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-faint)", marginBottom: 16 }}>Full review</div>
+            {questions.map((q, i) => {
+              const chosen = answers[q.id];
+              const isCorrect = chosen === q.correct;
+              const isSkipped = chosen === null;
+              return (
+                <div key={q.id} style={{ paddingBottom: 28, marginBottom: 28, borderBottom: "1px solid var(--hairline)" }}>
+                  <div style={{ display: "flex", gap: 10, marginBottom: 12, alignItems: "center" }}>
+                    <span style={{
+                      fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--paper)",
+                      background: isSkipped ? "var(--ink-faint)" : isCorrect ? "var(--success)" : "var(--danger)",
+                      padding: "2px 8px", borderRadius: 2, flexShrink: 0,
+                    }}>Q{i + 1}</span>
+                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-faint)" }}>{q.subject}</span>
+                  </div>
+                  <p style={{ fontSize: 14, color: "var(--ink)", lineHeight: 1.65, marginBottom: 14, whiteSpace: "pre-line" }}>{q.question}</p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
+                    {q.options.map((opt, oi) => {
+                      const isChosen = chosen === oi;
+                      const isCorrectOpt = q.correct === oi;
+                      let border = "var(--hairline)", bg = "transparent", textCol = "var(--ink-muted)";
+                      if (isCorrectOpt) { border = "var(--success)"; bg = "color-mix(in srgb, var(--success) 12%, transparent)"; textCol = "var(--success)"; }
+                      if (isChosen && !isCorrectOpt) { border = "var(--danger)"; bg = "color-mix(in srgb, var(--danger) 10%, transparent)"; textCol = "var(--danger)"; }
+                      return (
+                        <div key={oi} style={{ padding: "8px 12px", border: `1px solid ${border}`, borderRadius: 4, background: bg, fontSize: 13, color: textCol, display: "flex", gap: 8, alignItems: "flex-start" }}>
+                          <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, flexShrink: 0, marginTop: 1 }}>{String.fromCharCode(65 + oi)}.</span>
+                          <span>{opt}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {isSkipped && <p style={{ fontSize: 12, color: "var(--ink-faint)", fontStyle: "italic", marginBottom: 8 }}>Not answered</p>}
+                  <div style={{ background: "var(--surface)", border: "1px solid var(--hairline)", borderRadius: 4, padding: "10px 14px" }}>
+                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-faint)", marginBottom: 6 }}>Explanation</div>
+                    <p style={{ fontSize: 13, color: "var(--ink-muted)", lineHeight: 1.65 }}>{q.explanation}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div style={{ display: "flex", gap: 12 }}>
+            <button onClick={handleStart} style={{ padding: "10px 20px", borderRadius: 4, background: "var(--accent)", color: "var(--accent-ink)", fontSize: 14, fontWeight: 600, border: "none", cursor: "pointer", fontFamily: "inherit" }}>
+              Try again
+            </button>
+            <button onClick={() => setPhase("setup")} style={{ padding: "10px 20px", borderRadius: 4, border: "1px solid var(--hairline)", background: "transparent", color: "var(--ink-muted)", fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>
+              Change subject
+            </button>
           </div>
         </div>
       </div>
     );
   }
 
-  /* ── TEST SCREEN ───────────────────────────────────────────────────── */
-  if (screen === "test") {
-    const q = QUESTIONS[currentQ];
-    const selected = answers[currentQ];
-    const isLast = currentQ === QUESTIONS.length - 1;
-    const progress = ((currentQ + (selected !== null ? 1 : 0)) / QUESTIONS.length) * 100;
-    const timeIsLow = timeLeft < 180;
+  /* ── Test ────────────────────────────────────────────────────────────── */
+  if (phase === "test" && questions.length > 0) {
+    const q = questions[currentIdx];
+    const chosen = answers[q.id];
+    const isLast = currentIdx === questions.length - 1;
+    const answered = Object.values(answers).filter(v => v !== null).length;
 
     return (
       <div style={{ minHeight: "100vh", background: "var(--paper)", color: "var(--ink)" }}>
-        {/* Test header — not the marketing nav */}
         <div style={{ position: "sticky", top: 0, zIndex: 50, background: "var(--paper)", borderBottom: "1px solid var(--hairline)" }}>
-          <div className="site-wrap" style={{ padding: "0 32px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 52 }}>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--ink-muted)" }}>
-              Question <span style={{ color: "var(--ink)", fontWeight: 500 }}>{currentQ + 1}</span> / {QUESTIONS.length}
+          <div className="site-wrap" style={{ display: "flex", alignItems: "center", gap: 16, height: 52 }}>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--ink-muted)", whiteSpace: "nowrap" }}>
+              <strong style={{ color: "var(--ink)" }}>{currentIdx + 1}</strong> / {questions.length}
+            </span>
+            <div style={{ flex: 1, height: 2, background: "var(--hairline)", borderRadius: 1 }}>
+              <div style={{ height: "100%", width: `${(currentIdx / questions.length) * 100}%`, background: "var(--accent)", borderRadius: 1, transition: "width 0.2s" }} />
             </div>
-            <div style={{ height: 3, flex: 1, margin: "0 24px", background: "var(--hairline)", borderRadius: 2 }}>
-              <div style={{ height: "100%", width: `${progress}%`, background: "var(--accent)", borderRadius: 2, transition: "width 0.3s" }} />
-            </div>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: 14, fontWeight: 500, color: timeIsLow ? "var(--danger)" : "var(--ink-muted)", minWidth: 52, textAlign: "right" }}>
-              {formatTime(timeLeft)}
-            </div>
+            <CountdownTimer key={timerKey} seconds={totalSeconds} onExpire={handleExpire} />
           </div>
         </div>
 
-        <div className="site-wrap" style={{ paddingTop: 48, paddingBottom: 96, maxWidth: 640 }}>
-          <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-muted)", marginBottom: 16 }}>{q.subject}</div>
-          <p style={{ fontSize: 17, fontWeight: 500, color: "var(--ink)", lineHeight: 1.6, marginBottom: 32 }}>{q.question}</p>
+        <div className="site-wrap" style={{ paddingTop: 40, paddingBottom: 80, maxWidth: 640 }}>
+          <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--accent)", marginBottom: 16 }}>{q.subject}</div>
+          <p style={{ fontSize: 16, color: "var(--ink)", lineHeight: 1.7, marginBottom: 28, whiteSpace: "pre-line" }}>{q.question}</p>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 32 }}>
-            {q.options.map((opt, i) => {
-              const isSelected = selected === i;
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 32 }}>
+            {q.options.map((opt, oi) => {
+              const isSelected = chosen === oi;
               return (
                 <button
-                  key={i}
-                  onClick={() => selectAnswer(i)}
+                  key={oi}
+                  onClick={() => selectOption(q.id, oi)}
                   style={{
-                    textAlign: "left", padding: "14px 18px", border: `1px solid ${isSelected ? "var(--accent)" : "var(--hairline)"}`,
-                    borderRadius: 6, background: isSelected ? "var(--accent-bg)" : "var(--surface)",
-                    color: isSelected ? "var(--ink)" : "var(--ink-muted)", fontSize: 14, fontFamily: "inherit",
-                    cursor: "pointer", transition: "all 0.12s",
+                    padding: "12px 16px",
+                    border: `1.5px solid ${isSelected ? "var(--accent)" : "var(--hairline)"}`,
+                    borderRadius: 6,
+                    background: isSelected ? "color-mix(in srgb, var(--accent) 8%, transparent)" : "var(--surface)",
+                    color: isSelected ? "var(--ink)" : "var(--ink-muted)",
+                    fontSize: 14,
+                    fontFamily: "inherit",
+                    cursor: "pointer",
+                    textAlign: "left",
+                    display: "flex",
+                    gap: 12,
+                    alignItems: "flex-start",
                   }}
                 >
-                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, marginRight: 12, color: isSelected ? "var(--accent)" : "var(--ink-faint)" }}>
-                    {String.fromCharCode(65 + i)}
-                  </span>
-                  {opt}
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: isSelected ? "var(--accent)" : "var(--ink-faint)", flexShrink: 0, marginTop: 2 }}>{String.fromCharCode(65 + oi)}.</span>
+                  <span style={{ lineHeight: 1.55 }}>{opt}</span>
                 </button>
               );
             })}
           </div>
 
-          {selected !== null && (
-            <button
-              onClick={goNext}
-              style={{ padding: "10px 24px", borderRadius: 4, background: "var(--accent)", color: "var(--accent-ink)", fontSize: 14, fontWeight: 600, border: "none", cursor: "pointer", fontFamily: "inherit" }}
-            >
-              {isLast ? "Submit Test" : "Next →"}
-            </button>
-          )}
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            {currentIdx > 0 && (
+              <button onClick={() => setCurrentIdx(i => i - 1)} style={{ padding: "9px 18px", borderRadius: 4, border: "1px solid var(--hairline)", background: "transparent", color: "var(--ink-muted)", fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>
+                ← Previous
+              </button>
+            )}
+            {isLast ? (
+              <button onClick={submit} style={{ padding: "9px 20px", borderRadius: 4, background: "var(--accent)", color: "var(--accent-ink)", fontSize: 14, fontWeight: 600, border: "none", cursor: "pointer", fontFamily: "inherit" }}>
+                Submit Test ({answered}/{questions.length} answered)
+              </button>
+            ) : (
+              <button onClick={() => setCurrentIdx(i => i + 1)} style={{ padding: "9px 20px", borderRadius: 4, background: "var(--accent)", color: "var(--accent-ink)", fontSize: 14, fontWeight: 600, border: "none", cursor: "pointer", fontFamily: "inherit" }}>
+                Next →
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );
   }
 
-  /* ── RESULTS SCREEN ────────────────────────────────────────────────── */
-  const elapsedFmt = formatTime(elapsed);
-  const scoreColor = pct >= 75 ? "var(--success)" : pct >= 50 ? "var(--warning)" : "var(--danger)";
+  /* ── Setup ───────────────────────────────────────────────────────────── */
+  const filtered = subjectFilter === "All"
+    ? prelimsData.questions
+    : (prelimsData.questions as Question[]).filter(q => q.subject === subjectFilter);
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--paper)", color: "var(--ink)" }}>
       <Nav />
-      <div className="site-wrap" style={{ paddingTop: 56, paddingBottom: 96, maxWidth: 720 }}>
-        {/* Score header */}
-        <div style={{ marginBottom: 40, paddingBottom: 40, borderBottom: "1px solid var(--hairline)" }}>
-          <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-muted)", marginBottom: 8 }}>Test complete</div>
-          <div style={{ display: "flex", alignItems: "flex-end", gap: 16, marginBottom: 16 }}>
-            <span style={{ fontFamily: "var(--font-display)", fontSize: "var(--text-4xl)", fontWeight: 700, lineHeight: 1, color: scoreColor }}>{pct}%</span>
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 18, color: "var(--ink-muted)", paddingBottom: 8 }}>{correct} / {QUESTIONS.length}</span>
-          </div>
-          <div style={{ display: "flex", gap: 32 }}>
-            {[["Score", `${pct}%`], ["Time", elapsedFmt], ["Attempted", `${answered}/${QUESTIONS.length}`]].map(([label, val]) => (
-              <div key={label}>
-                <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 500, color: "var(--ink)" }}>{val}</div>
-                <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-faint)" }}>{label}</div>
-              </div>
+      <div className="site-wrap" style={{ paddingTop: 64, paddingBottom: 96, maxWidth: 560 }}>
+        <Link href="/" style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--ink-muted)", textDecoration: "none", display: "inline-block", marginBottom: 40 }}>← Back to Abhyaas AI</Link>
+
+        <span className="eyebrow">Mock Prelims</span>
+        <h1 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "var(--text-3xl)", letterSpacing: "-0.02em", marginBottom: 8 }}>
+          Timed MCQ practice
+        </h1>
+        <p style={{ color: "var(--ink-muted)", fontSize: 15, lineHeight: 1.7, marginBottom: 40 }}>
+          Adapted from UPSC Prelims 2023/2024 PYQs and standard syllabus facts.
+          One shared timer for the full set — mirrors real Prelims pacing.
+        </p>
+
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-faint)", marginBottom: 12 }}>Filter by subject</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {ALL_SUBJECTS.map(s => (
+              <button
+                key={s}
+                onClick={() => setSubjectFilter(s)}
+                style={{
+                  padding: "6px 14px", borderRadius: 4,
+                  border: `1px solid ${subjectFilter === s ? "var(--accent)" : "var(--hairline)"}`,
+                  background: subjectFilter === s ? "color-mix(in srgb, var(--accent) 10%, transparent)" : "transparent",
+                  color: subjectFilter === s ? "var(--accent)" : "var(--ink-muted)",
+                  fontSize: 13, cursor: "pointer", fontFamily: "inherit",
+                  fontWeight: subjectFilter === s ? 500 : 400,
+                }}
+              >
+                {s}
+              </button>
             ))}
           </div>
         </div>
 
-        {/* Per-question review */}
-        <div style={{ marginBottom: 40 }}>
-          <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 18, marginBottom: 20, color: "var(--ink)" }}>Question Review</h2>
-          {QUESTIONS.map((q, i) => {
-            const userAnswer = answers[i];
-            const isCorrect = userAnswer === q.correct;
-            const isOpen = expandedReview === i;
-            return (
-              <div key={i} style={{ borderLeft: `3px solid ${isCorrect ? "var(--success)" : "var(--danger)"}`, paddingLeft: 16, marginBottom: 16 }}>
-                <button
-                  onClick={() => setExpandedReview(isOpen ? null : i)}
-                  style={{ width: "100%", textAlign: "left", background: "none", border: "none", cursor: "pointer", padding: "8px 0", fontFamily: "inherit" }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ink-faint)", minWidth: 24 }}>Q{i + 1}</span>
-                    <span style={{ fontSize: 14, color: "var(--ink)", flex: 1, lineHeight: 1.5, textAlign: "left" }}>{q.question}</span>
-                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: isCorrect ? "var(--success)" : "var(--danger)", flexShrink: 0 }}>{isCorrect ? "Correct" : "Wrong"}</span>
-                    <span style={{ color: "var(--ink-faint)", fontSize: 12 }}>{isOpen ? "▲" : "▼"}</span>
-                  </div>
-                </button>
-                {isOpen && (
-                  <div style={{ paddingBottom: 12 }}>
-                    {q.options.map((opt, j) => (
-                      <div key={j} style={{ fontSize: 13, padding: "4px 0", color: j === q.correct ? "var(--success)" : j === userAnswer ? "var(--danger)" : "var(--ink-muted)", display: "flex", gap: 10 }}>
-                        <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "inherit" }}>{String.fromCharCode(65 + j)}</span>
-                        <span>{opt}{j === q.correct ? " ✓" : j === userAnswer && userAnswer !== q.correct ? " ✗" : ""}</span>
-                      </div>
-                    ))}
-                    <p style={{ fontSize: 13, color: "var(--ink-muted)", marginTop: 10, lineHeight: 1.6, borderLeft: "2px solid var(--hairline)", paddingLeft: 12 }}>{q.explanation}</p>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+        <div style={{ background: "var(--surface)", border: "1px solid var(--hairline)", borderRadius: 6, padding: "20px 24px", marginBottom: 28 }}>
+          <div style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 16, color: "var(--ink)", marginBottom: 4 }}>
+            {filtered.length} question{filtered.length !== 1 ? "s" : ""}
+            {subjectFilter !== "All" ? ` — ${subjectFilter}` : " across all subjects"}
+          </div>
+          <div style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--ink-muted)" }}>
+            {Math.ceil(filtered.length * prelimsData.meta.default_time_per_question_seconds / 60)} min · {prelimsData.meta.default_time_per_question_seconds}s per question (shared clock)
+          </div>
         </div>
 
         <button
-          onClick={() => { setScreen("select"); }}
-          style={{ padding: "10px 24px", borderRadius: 4, background: "var(--accent)", color: "var(--accent-ink)", fontSize: 14, fontWeight: 600, border: "none", cursor: "pointer", fontFamily: "inherit" }}
+          onClick={handleStart}
+          disabled={filtered.length === 0}
+          style={{ padding: "12px 28px", borderRadius: 4, background: filtered.length > 0 ? "var(--accent)" : "var(--hairline)", color: "var(--accent-ink)", fontSize: 15, fontWeight: 600, border: "none", cursor: filtered.length > 0 ? "pointer" : "not-allowed", fontFamily: "inherit" }}
         >
-          Practice Again
+          Start Test →
         </button>
       </div>
     </div>

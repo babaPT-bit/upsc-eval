@@ -1,0 +1,204 @@
+{
+  "question_sets": [
+    {
+      "id": "gs3-2024-official",
+      "label": "GS3 2024 — Economy, Security, Environment",
+      "paper": "GS Paper III",
+      "source": "Official UPSC Mains 2024",
+      "questions": [
+        {
+          "id": "gs3-2024-1",
+          "question": "Discuss the opportunities and challenges India faces in transitioning to a circular economy. What policy measures can accelerate this transition?",
+          "marks": 15,
+          "time_minutes": 20,
+          "word_limit": 250,
+          "topic": "Economy & Environment"
+        },
+        {
+          "id": "gs3-2024-2",
+          "question": "Examine the role of Artificial Intelligence in transforming India's agricultural sector. What are the associated risks and how can they be mitigated?",
+          "marks": 15,
+          "time_minutes": 20,
+          "word_limit": 250,
+          "topic": "Agriculture & Technology"
+        },
+        {
+          "id": "gs3-2024-3",
+          "question": "What is Critical Infrastructure? Discuss the threats to India's critical information infrastructure and the measures taken to protect it.",
+          "marks": 10,
+          "time_minutes": 13,
+          "word_limit": 150,
+          "topic": "Internal Security"
+        },
+        {
+          "id": "gs3-2024-4",
+          "question": "Discuss the significance of the PM GatiShakti National Master Plan for infrastructure development in India. How does it address the challenge of siloed planning?",
+          "marks": 15,
+          "time_minutes": 20,
+          "word_limit": 250,
+          "topic": "Infrastructure"
+        },
+        {
+          "id": "gs3-2024-5",
+          "question": "Assess the impact of climate change on India's monsoon pattern. What adaptation strategies should India adopt to safeguard food security?",
+          "marks": 15,
+          "time_minutes": 20,
+          "word_limit": 250,
+          "topic": "Environment & Disaster Management"
+        },
+        {
+          "id": "gs3-2024-6",
+          "question": "What is the significance of India's blue economy? Discuss the challenges in harnessing marine resources sustainably.",
+          "marks": 10,
+          "time_minutes": 13,
+          "word_limit": 150,
+          "topic": "Economy & Resources"
+        }
+      ]
+    },
+    {
+      "id": "gs2-polity-practice",
+      "label": "GS2 — Polity, Governance & IR",
+      "paper": "GS Paper II",
+      "source": "PYQ-style practice questions",
+      "questions": [
+        {
+          "id": "gs2-p-1",
+          "question": "The office of the Governor has been described as both a 'constitutional head' and an 'agent of the Centre.' Critically examine this duality with reference to recent controversies.",
+          "marks": 15,
+          "time_minutes": 20,
+          "word_limit": 250,
+          "topic": "Indian Polity"
+        },
+        {
+          "id": "gs2-p-2",
+          "question": "Discuss the constitutional provisions regarding the independence of the judiciary in India. How has judicial activism challenged the principle of separation of powers?",
+          "marks": 15,
+          "time_minutes": 20,
+          "word_limit": 250,
+          "topic": "Judiciary"
+        },
+        {
+          "id": "gs2-p-3",
+          "question": "Examine India's 'Neighbourhood First' policy. How effective has it been in managing bilateral relations with South Asian neighbours?",
+          "marks": 15,
+          "time_minutes": 20,
+          "word_limit": 250,
+          "topic": "International Relations"
+        },
+        {
+          "id": "gs2-p-4",
+          "question": "What is cooperative federalism? Evaluate its manifestation in India's response to COVID-19 and the implementation of GST.",
+          "marks": 10,
+          "time_minutes": 13,
+          "word_limit": 150,
+          "topic": "Federalism"
+        },
+        {
+          "id": "gs2-p-5",
+          "question": "Critically evaluate the role of Parliamentary Committees in strengthening legislative oversight of the executive in India.",
+          "marks": 10,
+          "time_minutes": 13,
+          "word_limit": 150,
+          "topic": "Parliament"
+        }
+      ]
+    },
+    {
+      "id": "gs1-history-practice",
+      "label": "GS1 — History, Society & Geography",
+      "paper": "GS Paper I",
+      "source": "PYQ-style practice questions",
+      "questions": [
+        {
+          "id": "gs1-p-1",
+          "question": "Analyze the causes and consequences of the Revolt of 1857. Why did it fail to dislodge British rule?",
+          "marks": 15,
+          "time_minutes": 20,
+          "word_limit": 250,
+          "topic": "Modern Indian History"
+        },
+        {
+          "id": "gs1-p-2",
+          "question": "Discuss the contribution of Mahatma Gandhi to the Indian national movement. How did his methods differ from the earlier phase of moderate nationalism?",
+          "marks": 15,
+          "time_minutes": 20,
+          "word_limit": 250,
+          "topic": "Freedom Struggle"
+        },
+        {
+          "id": "gs1-p-3",
+          "question": "Examine the factors responsible for the changing nature of India's population distribution. What are the socio-economic implications of regional population imbalances?",
+          "marks": 15,
+          "time_minutes": 20,
+          "word_limit": 250,
+          "topic": "Indian Society & Geography"
+        },
+        {
+          "id": "gs1-p-4",
+          "question": "Discuss the significance of the Bhakti and Sufi movements in fostering social harmony in medieval India.",
+          "marks": 10,
+          "time_minutes": 13,
+          "word_limit": 150,
+          "topic": "Medieval History"
+        }
+      ]
+    },
+    {
+      "id": "gs4-ethics-practice",
+      "label": "GS4 — Ethics, Integrity & Aptitude",
+      "paper": "GS Paper IV",
+      "source": "PYQ-style practice questions",
+      "questions": [
+        {
+          "id": "gs4-p-1",
+          "question": "What do you understand by 'emotional intelligence'? Discuss its significance for a civil servant dealing with diverse stakeholders.",
+          "marks": 10,
+          "time_minutes": 13,
+          "word_limit": 150,
+          "topic": "Emotional Intelligence"
+        },
+        {
+          "id": "gs4-p-2",
+          "question": "A District Magistrate discovers that a welfare scheme is being implemented fraudulently by local officials colluding with beneficiaries. Whistleblowing could disrupt the scheme for genuine beneficiaries. What ethical course of action would you take? Justify your decision.",
+          "marks": 15,
+          "time_minutes": 20,
+          "word_limit": 250,
+          "topic": "Case Study"
+        },
+        {
+          "id": "gs4-p-3",
+          "question": "Distinguish between 'ethics in public administration' and 'ethics for public administration.' Why is this distinction important?",
+          "marks": 10,
+          "time_minutes": 13,
+          "word_limit": 150,
+          "topic": "Public Administration Ethics"
+        }
+      ]
+    },
+    {
+      "id": "essay-practice",
+      "label": "Essay — Two essay topics",
+      "paper": "Essay Paper",
+      "source": "PYQ-style practice questions",
+      "questions": [
+        {
+          "id": "essay-p-1",
+          "question": "\"Forests precede civilisations; deserts follow them.\" Examine this statement in the context of India's development challenges.",
+          "marks": 125,
+          "time_minutes": 90,
+          "word_limit": 1000,
+          "topic": "Environment & Development"
+        },
+        {
+          "id": "essay-p-2",
+          "question": "\"Technology is a useful servant but a dangerous master.\" Critically examine this in the context of AI and digital governance in India.",
+          "marks": 125,
+          "time_minutes": 90,
+          "word_limit": 1000,
+          "topic": "Technology & Governance"
+        }
+      ]
+    }
+  ]
+}
