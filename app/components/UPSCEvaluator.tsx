@@ -1071,7 +1071,8 @@ export default function UPSCEvaluator() {
     <div style={{ minHeight: "100vh", background: "var(--paper)", color: "var(--ink)", fontFamily: "var(--font-sans)", fontSize: 14 }}>
       <style>{css}</style>
 
-      <main style={{ maxWidth: 720, padding: "0 32px" }}>
+      <div className="site-wrap">
+      <main style={{ maxWidth: 720, padding: 0 }}>
 
         {/* Utility controls — dark mode + new answer */}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, padding: "16px 0 0" }}>
@@ -1747,6 +1748,7 @@ export default function UPSCEvaluator() {
         )}
 
       </main>
+      </div>
 
       {/* FEEDBACK MODAL removed — Rate button now opens Tally form */}
     </div>
