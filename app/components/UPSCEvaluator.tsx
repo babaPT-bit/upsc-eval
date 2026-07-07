@@ -848,6 +848,8 @@ export default function UPSCEvaluator() {
           // ── PDF: regular POST to /evaluate ──
           const formData = new FormData();
           formData.append("file", pdfFile);
+          if (selectedPaper) formData.append("paper", selectedPaper);
+          if (selectedMarks) formData.append("marks", String(selectedMarks));
 
           const response = await fetch("https://PranshuT-upsc-answer-evaluator.hf.space/evaluate", {
             method: "POST",
@@ -1205,6 +1207,29 @@ export default function UPSCEvaluator() {
                     <button onClick={() => setPdfFile(null)} style={{ padding: 6, borderRadius: 4, border: "1px solid var(--c-border)", background: "transparent", color: "var(--c-text-secondary)", display: "flex", alignItems: "center" }}><IconX /></button>
                   </div>
                 )}
+
+                {/* Paper + marks — optional, nudged */}
+                <div style={{ marginTop: 18, paddingTop: 16, borderTop: "1px solid var(--c-border)" }}>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 24 }}>
+                    <div>
+                      <p style={{ fontSize: 11, fontWeight: 600, color: "var(--c-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>Paper</p>
+                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                        {(["GS1", "GS2", "GS3", "GS4", "Essay"] as PaperType[]).map(p => (
+                          <button type="button" key={p} className={`v3-chip${selectedPaper === p ? " on" : ""}`} onClick={() => setSelectedPaper(selectedPaper === p ? null : p)}>{p}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p style={{ fontSize: 11, fontWeight: 600, color: "var(--c-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>Marks</p>
+                      <div style={{ display: "flex", gap: 4 }}>
+                        {([10, 15, 20] as MarksType[]).map(m => (
+                          <button type="button" key={m} className={`v3-chip${selectedMarks === m ? " on" : ""}`} onClick={() => setSelectedMarks(selectedMarks === m ? null : m)}>{m}</button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <p style={{ fontSize: 12, color: "var(--c-text-tertiary)", marginTop: 10 }}>Select your paper and marks for sharper, paper-specific feedback (optional).</p>
+                </div>
               </div>
             )}
 
@@ -1265,23 +1290,21 @@ export default function UPSCEvaluator() {
                     <div>
                       <p style={{ fontSize: 11, fontWeight: 600, color: "var(--c-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>Paper</p>
                       <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                        <button type="button" className={`v3-chip${selectedPaper === null ? " on" : ""}`} onClick={() => setSelectedPaper(null)}>Auto-detect</button>
                         {(["GS1", "GS2", "GS3", "GS4", "Essay"] as PaperType[]).map(p => (
-                          <button type="button" key={p} className={`v3-chip${selectedPaper === p ? " on" : ""}`} onClick={() => setSelectedPaper(p)}>{p}</button>
+                          <button type="button" key={p} className={`v3-chip${selectedPaper === p ? " on" : ""}`} onClick={() => setSelectedPaper(selectedPaper === p ? null : p)}>{p}</button>
                         ))}
                       </div>
                     </div>
                     <div>
                       <p style={{ fontSize: 11, fontWeight: 600, color: "var(--c-text-tertiary)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>Marks</p>
                       <div style={{ display: "flex", gap: 4 }}>
-                        <button type="button" className={`v3-chip${selectedMarks === null ? " on" : ""}`} onClick={() => setSelectedMarks(null)}>Auto</button>
                         {([10, 15, 20] as MarksType[]).map(m => (
-                          <button type="button" key={m} className={`v3-chip${selectedMarks === m ? " on" : ""}`} onClick={() => setSelectedMarks(m)}>{m}</button>
+                          <button type="button" key={m} className={`v3-chip${selectedMarks === m ? " on" : ""}`} onClick={() => setSelectedMarks(selectedMarks === m ? null : m)}>{m}</button>
                         ))}
                       </div>
                     </div>
                   </div>
-                  <p style={{ fontSize: 12, color: "var(--c-text-tertiary)", marginTop: 10 }}>Tell us the paper for sharper, paper-specific feedback.</p>
+                  <p style={{ fontSize: 12, color: "var(--c-text-tertiary)", marginTop: 10 }}>Select your paper and marks for sharper, paper-specific feedback (optional).</p>
                 </div>
               </div>
             )}
