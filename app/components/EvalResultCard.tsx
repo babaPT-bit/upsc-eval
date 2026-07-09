@@ -7,13 +7,18 @@ export interface ResultDimension {
   comment?: string;
 }
 
+export type Improvement = string | { action_type?: string; message: string };
+export function improvementText(item: Improvement): string {
+  return typeof item === "string" ? item : (item?.message ?? "");
+}
+
 export interface EvalResultData {
   percentage: number;
   overallScore: number;
   maxScore: number;
   examinerVerdict?: string;
   dimensions: ResultDimension[];
-  improvements?: string[];
+  improvements?: Improvement[];
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -21,25 +26,26 @@ export function mapToEvalResult(data: any, fallbackMaxScore = 10): EvalResultDat
   const answer = data?.answers?.[0];
   const evaluation = answer?.evaluation || data?.evaluation || data || {};
 
-  const dimKeys: Record<string, string> = {
-    question_comprehension: "Question Comprehension",
-    factual_accuracy: "Factual Accuracy",
-    syllabus_alignment: "Syllabus Alignment",
-    current_affairs: "Current Affairs",
-    answer_structure: "Answer Structure",
-    point_density: "Point Density",
-    presentation: "Presentation",
-  };
-
+  // New shape: answer.dimensions[] is already fully formed ({name,key,score,max,comment}),
+  // data-driven across both the GS and Essay dimension sets. Prefer it.
   const dimensions: ResultDimension[] = [];
-  for (const [key, label] of Object.entries(dimKeys)) {
-    const d = evaluation[key];
-    if (d) dimensions.push({ name: label, score: d.score ?? 0, max: 10, comment: d.comment ?? "" });
-  }
-
-  if (dimensions.length === 0 && answer?.dimensions) {
+  if (Array.isArray(answer?.dimensions) && answer.dimensions.length > 0) {
     for (const d of answer.dimensions) {
-      dimensions.push({ name: d.name, score: d.score, max: d.max ?? 10, comment: d.comment ?? "" });
+      dimensions.push({ name: d.name, score: d.score ?? 0, max: d.max ?? 10, comment: d.comment ?? "" });
+    }
+  } else {
+    const dimKeys: Record<string, string> = {
+      question_comprehension: "Question Comprehension",
+      factual_accuracy: "Factual Accuracy",
+      syllabus_alignment: "Syllabus Alignment",
+      current_affairs: "Current Affairs",
+      answer_structure: "Answer Structure",
+      point_density: "Point Density",
+      presentation: "Presentation",
+    };
+    for (const [key, label] of Object.entries(dimKeys)) {
+      const d = evaluation[key];
+      if (d) dimensions.push({ name: label, score: d.score ?? 0, max: 10, comment: d.comment ?? "" });
     }
   }
 
@@ -122,7 +128,7 @@ export default function EvalResultCard({ result, compact = false }: EvalResultCa
             {improvements.slice(0, 3).map((imp, i) => (
               <li key={i} style={{ display: "flex", gap: 10, marginBottom: 8 }}>
                 <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--accent)", marginTop: 1, flexShrink: 0 }}>{i + 1}.</span>
-                <span style={{ fontSize: 13, color: "var(--ink-muted)", lineHeight: 1.6 }}>{imp}</span>
+                <span style={{ fontSize: 13, color: "var(--ink-muted)", lineHeight: 1.6 }}>{improvementText(imp)}</span>
               </li>
             ))}
           </ul>

@@ -81,6 +81,9 @@ const MOCK_RESULT: EvalResult = {
   directive: "CRITICALLY EXAMINE",
   syllabusTag: "GS2 — Indian Constitution",
   wordCount: 287,
+  isEssay: false,
+  paper: "GS2",
+  marks: 15,
   examinerVerdict:
     "The answer demonstrates a reasonable understanding of the topic but lacks depth in constitutional analysis. The candidate correctly identifies key structural issues but fails to support claims with specific constitutional provisions or landmark judgments. Structure is satisfactory but the conclusion is generic.",
   dimensions: [
@@ -124,18 +127,32 @@ type PaperType = "GS1" | "GS2" | "GS3" | "GS4" | "Essay";
 type MarksType = 10 | 15 | 20;
 
 interface PYQItem { id: string; q: string; marks: number; }
-interface Dimension { name: string; weight: string; score: number; max: number; comment: string; }
+interface Dimension { name: string; key?: string; weight?: string; score: number; max: number; comment: string; }
 interface FactualError { severity: "critical" | "moderate" | "minor"; errorText: string; whatIsWrong: string; correction: string; }
+interface ImprovementItem { action_type?: string; message: string; }
+type Improvement = string | ImprovementItem;
+interface KeyPointsCoverage { covered: string[]; partially_covered: string[]; missing: string[]; source?: string; }
+interface DirectiveCompliance { directiveFollowed?: boolean | null; complianceNote?: string | null; structureMatch?: boolean | null; structureNote?: string | null; }
 interface EvalResult {
   overallScore: number; maxScore: number; percentage: number;
   directive: string; syllabusTag: string; wordCount: number;
   examinerVerdict: string;
+  isEssay: boolean;
   dimensions: Dimension[];
   factualErrors: FactualError[];
-  improvements: string[];
+  improvements: Improvement[];
   summary: { strengths: string[]; weaknesses: string[]; topRecommendation: string; };
+  keyPointsCoverage?: KeyPointsCoverage;
+  coverageScore?: string;
+  directiveCompliance?: DirectiveCompliance;
+  paper?: string;
+  marks?: number;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   _rawEvaluation?: any;
+}
+
+function improvementText(item: Improvement): string {
+  return typeof item === "string" ? item : (item?.message ?? "");
 }
 interface Attempt { num: number; percentage: number; result: EvalResult; }
 type DimFeedback = Record<string, "agree" | "disagree">;
@@ -152,41 +169,43 @@ function mapApiResponse(apiData: any): EvalResult {
   if (!answer) throw new Error("No answers in response");
 
   const evaluation = answer.evaluation || {};
-  const dimensions: Dimension[] = [];
+  const isEssay = !!answer.isEssay;
+  let dimensions: Dimension[] = [];
 
-  const dimMap: Record<string, { weight: string }> = {
-    question_comprehension: { weight: "20%" },
-    factual_accuracy:       { weight: "20%" },
-    syllabus_alignment:     { weight: "15%" },
-    current_affairs:        { weight: "10%" },
-    answer_structure:       { weight: "15%" },
-    point_density:          { weight: "15%" },
-    presentation:           { weight: "5%"  },
-  };
-
-  for (const [key, config] of Object.entries(dimMap)) {
-    const dim = evaluation[key];
-    if (dim) {
-      dimensions.push({
-        name: key.split("_").map((w: string) => w[0].toUpperCase() + w.slice(1)).join(" "),
-        weight: config.weight,
-        score: dim.score ?? 0,
-        max: 10,
-        comment: dim.comment ?? "",
-      });
-    }
-  }
-
-  // V1 fallback
-  if (dimensions.length === 0 && answer.dimensions) {
-    for (const dim of answer.dimensions) {
-      dimensions.push({
-        name: dim.name,
-        weight: "",
-        score: dim.score,
-        max: dim.max || 10,
-        comment: dim.comment || "",
-      });
+  // New shape: answer.dimensions[] already fully formed as {name,key,score,max,comment},
+  // data-driven across both the 8 GS dims and the 6 Essay dims. Use it directly.
+  if (Array.isArray(answer.dimensions) && answer.dimensions.length > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    dimensions = answer.dimensions.map((dim: any) => ({
+      name: dim.name,
+      key: dim.key,
+      score: dim.score ?? 0,
+      max: dim.max || 10,
+      comment: dim.comment || "",
+    }));
+  } else {
+    // Legacy fallback — reconstruct the old fixed 7-dim GS set from evaluation.<key>.score
+    const dimMap: Record<string, { weight: string }> = {
+      question_comprehension: { weight: "20%" },
+      factual_accuracy:       { weight: "20%" },
+      syllabus_alignment:     { weight: "15%" },
+      current_affairs:        { weight: "10%" },
+      answer_structure:       { weight: "15%" },
+      point_density:          { weight: "15%" },
+      presentation:           { weight: "5%"  },
+    };
+    for (const [key, config] of Object.entries(dimMap)) {
+      const dim = evaluation[key];
+      if (dim) {
+        dimensions.push({
+          name: key.split("_").map((w: string) => w[0].toUpperCase() + w.slice(1)).join(" "),
+          key,
+          weight: config.weight,
+          score: dim.score ?? 0,
+          max: 10,
+          comment: dim.comment ?? "",
+        });
+      }
     }
   }
 
@@ -201,8 +220,25 @@ function mapApiResponse(apiData: any): EvalResult {
     });
   }
 
-  const improvements: string[] = evaluation.top_3_improvements || answer.improvements || [];
+  const improvements: Improvement[] = answer.improvements || evaluation.top_3_improvements || [];
   const summary = apiData.summary || {};
+
+  // GS-only fields — absent on essay answers
+  const kpc = answer.keyPointsCoverage;
+  const keyPointsCoverage: KeyPointsCoverage | undefined = (kpc && typeof kpc === "object") ? {
+    covered: kpc.covered || [],
+    partially_covered: kpc.partially_covered || [],
+    missing: kpc.missing || [],
+    source: kpc.source,
+  } : undefined;
+
+  const dc = answer.directiveCompliance;
+  const directiveCompliance: DirectiveCompliance | undefined = (dc && typeof dc === "object") ? {
+    directiveFollowed: dc.directiveFollowed ?? null,
+    complianceNote: dc.complianceNote ?? null,
+    structureMatch: dc.structureMatch ?? null,
+    structureNote: dc.structureNote ?? null,
+  } : undefined;
 
   return {
     overallScore: answer.overallScore ?? evaluation.overall_score ?? 0,
@@ -212,9 +248,15 @@ function mapApiResponse(apiData: any): EvalResult {
     syllabusTag: answer.syllabus ? `${answer.syllabus.paper} — ${answer.syllabus.topic}` : "",
     wordCount: answer.metrics?.word_count ?? 0,
     examinerVerdict: evaluation.examiner_verdict || "",
+    isEssay,
     dimensions,
     factualErrors,
     improvements,
+    keyPointsCoverage,
+    coverageScore: typeof answer.coverageScore === "string" && answer.coverageScore.trim() ? answer.coverageScore.trim() : undefined,
+    directiveCompliance,
+    paper: answer.syllabus?.paper,
+    marks: answer.marks,
     summary: {
       strengths: summary.strengths || [],
       weaknesses: summary.weaknesses || [],
@@ -631,13 +673,13 @@ function buildDiffsFromResult(result: EvalResult): DiffItem[] {
     const dimData = evalData[key];
     if (dimData && typeof dimData === "object" && dimData.score < 6) {
       if (dimData.anchor_text && dimData.anchor_type === "weakness") {
-        const matchingTip = result.improvements.find(imp =>
-          imp.toLowerCase().includes(key.split("_")[0]) ||
-          imp.toLowerCase().includes(name.toLowerCase().split(" ")[0])
-        );
+        const matchingTip = result.improvements.find(imp => {
+          const t = improvementText(imp).toLowerCase();
+          return t.includes(key.split("_")[0]) || t.includes(name.toLowerCase().split(" ")[0]);
+        });
         diffs.push({
           original_text: dimData.anchor_text,
-          suggested_text: matchingTip || dimData.comment || `Improve ${name}`,
+          suggested_text: (matchingTip ? improvementText(matchingTip) : "") || dimData.comment || `Improve ${name}`,
           diff_type: "weakness",
           dimension: name,
           reason: dimData.comment || "",
@@ -772,6 +814,8 @@ export default function UPSCEvaluator() {
   const [suggestedAnswer, setSuggestedAnswer] = useState<string | null>(null);
   const [suggestLoading, setSuggestLoading] = useState(false);
   const [showSuggestedView, setShowSuggestedView] = useState(false);
+  const [suggestMode, setSuggestMode] = useState<"exam" | "study">("exam");
+  const [withinWordLimit, setWithinWordLimit] = useState<boolean | null>(null);
 
   /* ── editor ── */
   const [editorHtml, setEditorHtml] = useState("");
@@ -782,6 +826,12 @@ export default function UPSCEvaluator() {
   /* ── paper + marks (optional, nudged) ── */
   const [selectedPaper, setSelectedPaper] = useState<PaperType | null>(null);
   const [selectedMarks, setSelectedMarks] = useState<MarksType | null>(null);
+  const [caseStudy, setCaseStudy] = useState(false);
+
+  /* GS4 case-study toggle only applies to GS4 — force off otherwise */
+  useEffect(() => {
+    if (selectedPaper !== "GS4" && caseStudy) setCaseStudy(false);
+  }, [selectedPaper, caseStudy]);
 
   /* ── PDF ── */
   const [pdfFile, setPdfFile] = useState<File | null>(null);
@@ -850,6 +900,7 @@ export default function UPSCEvaluator() {
           formData.append("file", pdfFile);
           if (selectedPaper) formData.append("paper", selectedPaper);
           if (selectedMarks) formData.append("marks", String(selectedMarks));
+          formData.append("case_study", String(caseStudy));
 
           const response = await fetch("https://PranshuT-upsc-answer-evaluator.hf.space/evaluate", {
             method: "POST",
@@ -886,6 +937,7 @@ export default function UPSCEvaluator() {
           const textBody: Record<string, unknown> = { text: submittedText, question: submittedQuestion };
           if (selectedPaper) textBody.paper = selectedPaper;
           if (selectedMarks) textBody.marks = selectedMarks;
+          textBody.case_study = caseStudy;
 
           const response = await fetch("https://PranshuT-upsc-answer-evaluator.hf.space/evaluate-text", {
             method: "POST",
@@ -1006,7 +1058,7 @@ export default function UPSCEvaluator() {
   };
 
 
-  const fetchSuggestedAnswer = async () => {
+  const fetchSuggestedAnswer = async (mode: "exam" | "study" = "exam") => {
     if (!result) return;
     setSuggestLoading(true);
     const weakDims = result.dimensions.filter(d => d.score < 6).map(d => d.name);
@@ -1021,11 +1073,18 @@ export default function UPSCEvaluator() {
           improvements: result.improvements,
           factual_errors: errors,
           weak_dimensions: weakDims,
+          mode,
+          paper: result.paper,
+          marks: result.marks,
+          score: result.overallScore,
+          case_study: caseStudy,
         }),
       });
       if (response.ok) {
         const data = await response.json();
         setSuggestedAnswer(data.suggested_answer);
+        setSuggestMode(data.mode === "study" ? "study" : "exam");
+        setWithinWordLimit(typeof data.within_word_limit === "boolean" ? data.within_word_limit : null);
         setShowSuggestedView(true);
       } else {
         console.warn("Suggest answer failed:", response.status);
@@ -1229,6 +1288,11 @@ export default function UPSCEvaluator() {
                     </div>
                   </div>
                   <p style={{ fontSize: 12, color: "var(--c-text-tertiary)", marginTop: 10 }}>Select your paper and marks for sharper, paper-specific feedback (optional).</p>
+                  {selectedPaper === "GS4" && (
+                    <div style={{ marginTop: 12 }}>
+                      <button type="button" className={`v3-chip${caseStudy ? " on" : ""}`} onClick={() => setCaseStudy(c => !c)}>This is a case study</button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1305,6 +1369,11 @@ export default function UPSCEvaluator() {
                     </div>
                   </div>
                   <p style={{ fontSize: 12, color: "var(--c-text-tertiary)", marginTop: 10 }}>Select your paper and marks for sharper, paper-specific feedback (optional).</p>
+                  {selectedPaper === "GS4" && (
+                    <div style={{ marginTop: 12 }}>
+                      <button type="button" className={`v3-chip${caseStudy ? " on" : ""}`} onClick={() => setCaseStudy(c => !c)}>This is a case study</button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1471,8 +1540,63 @@ export default function UPSCEvaluator() {
             </div>
 
             {/* ── SCORES ── */}
-            {resultTab === "scores" && (
+            {resultTab === "scores" && (() => {
+              const coverageMatch = result.coverageScore?.match(/^(\d+)\s*\/\s*(\d+)$/);
+              const kpc = result.keyPointsCoverage;
+              const dc = result.directiveCompliance;
+              const showDirectiveNote = !result.isEssay && dc?.directiveFollowed === false && !!dc?.complianceNote;
+              const showStructureNote = !result.isEssay && dc?.structureMatch === false && !!dc?.structureNote;
+              const covLight = { covered: "#448361", partial: "#C29243", missing: "#D44C47" };
+              const covDark = { covered: "#4F9768", partial: "#C29243", missing: "#D44C47" };
+              const covColor = darkMode ? covDark : covLight;
+              const secondaryText = darkMode ? "#999999" : "#787774";
+
+              return (
               <div style={{ animation: "upscSlideIn 0.15s ease" }}>
+
+                {/* Key points coverage — GS answers only */}
+                {!result.isEssay && coverageMatch && (
+                  <div style={{ marginBottom: 20, paddingBottom: 20, borderBottom: "1px solid var(--c-border)" }}>
+                    <h3 style={{ fontWeight: 500, fontSize: 15, marginBottom: 4, color: "var(--c-text)" }}>
+                      You covered {coverageMatch[1]}/{coverageMatch[2]} expected key points
+                    </h3>
+                    {kpc?.source === "inferred" && (
+                      <p style={{ fontSize: 12, color: secondaryText, marginBottom: 10 }}>
+                        Estimated — no reference bank for this exact topic yet
+                      </p>
+                    )}
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 10 }}>
+                      {(kpc?.covered ?? []).map((pt, i) => (
+                        <span key={`cov-${i}`} style={{ padding: "4px 10px", borderRadius: 4, fontSize: 12, background: "transparent", border: `1px solid ${covColor.covered}`, color: covColor.covered, fontWeight: 500, maxWidth: "100%", overflowWrap: "break-word" }}>{pt}</span>
+                      ))}
+                      {(kpc?.partially_covered ?? []).map((pt, i) => (
+                        <span key={`part-${i}`} style={{ padding: "4px 10px", borderRadius: 4, fontSize: 12, background: "transparent", border: `1px solid ${covColor.partial}`, color: covColor.partial, fontWeight: 500, maxWidth: "100%", overflowWrap: "break-word" }}>{pt}</span>
+                      ))}
+                      {(kpc?.missing ?? []).map((pt, i) => (
+                        <span key={`miss-${i}`} style={{ padding: "4px 10px", borderRadius: 4, fontSize: 12, background: "transparent", border: `1px solid ${covColor.missing}`, color: covColor.missing, fontWeight: 500, maxWidth: "100%", overflowWrap: "break-word" }}>{pt}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Directive compliance callout — GS answers only, only when there's something to say */}
+                {(showDirectiveNote || showStructureNote) && (
+                  <div style={{ marginBottom: 20 }}>
+                    {showDirectiveNote && (
+                      <div style={{ display: "flex", gap: 8, padding: "10px 14px", borderRadius: 6, background: "var(--c-amber-bg)", border: "1px solid var(--c-amber)", marginBottom: 8 }}>
+                        <span style={{ color: "var(--c-amber)", flexShrink: 0 }}><IconWarning size={15} /></span>
+                        <p style={{ fontSize: 13, color: "var(--c-text)", lineHeight: 1.55 }}>{dc?.complianceNote}</p>
+                      </div>
+                    )}
+                    {showStructureNote && (
+                      <div style={{ display: "flex", gap: 8, padding: "10px 14px", borderRadius: 6, background: "var(--c-amber-bg)", border: "1px solid var(--c-amber)" }}>
+                        <span style={{ color: "var(--c-amber)", flexShrink: 0 }}><IconWarning size={15} /></span>
+                        <p style={{ fontSize: 13, color: "var(--c-text)", lineHeight: 1.55 }}>{dc?.structureNote}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <h3 style={{ fontWeight: 500, fontSize: 15, marginBottom: 4, color: "var(--c-text)" }}>Where you scored</h3>
                 <p style={{ fontSize: 12, color: "var(--c-text-secondary)", marginBottom: 16 }}>Each bar is what an examiner checks for.</p>
                 {result.dimensions.map((dim, i) => {
@@ -1484,7 +1608,9 @@ export default function UPSCEvaluator() {
                       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 2 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                           <span style={{ fontSize: 13, fontWeight: 600 }}>{dim.name}</span>
-                          <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, padding: "1px 6px", borderRadius: 3, background: "var(--c-surface-hover)", border: "1px solid var(--c-border)", color: "var(--c-text-secondary)" }}>{dim.weight}</span>
+                          {dim.weight && (
+                            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 10, padding: "1px 6px", borderRadius: 3, background: "var(--c-surface-hover)", border: "1px solid var(--c-border)", color: "var(--c-text-secondary)" }}>{dim.weight}</span>
+                          )}
                         </div>
                         <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 13, fontWeight: 700, color: col }}>{dim.score}/{dim.max}</span>
                       </div>
@@ -1503,7 +1629,8 @@ export default function UPSCEvaluator() {
                   );
                 })}
               </div>
-            )}
+              );
+            })()}
 
             {/* ── ERRORS ── */}
             {resultTab === "errors" && (
@@ -1614,7 +1741,7 @@ export default function UPSCEvaluator() {
                         onMouseEnter={e => e.currentTarget.style.background = "var(--c-surface-hover)"}
                         onMouseLeave={e => e.currentTarget.style.background = "var(--c-surface)"}>
                         <div style={{ width: 22, height: 22, borderRadius: "50%", flexShrink: 0, background: "var(--c-accent-bg)", color: "var(--c-accent)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'JetBrains Mono',monospace", fontSize: 11, fontWeight: 700 }}>{i + 1}</div>
-                        <p style={{ fontSize: 13, color: "var(--c-text)", lineHeight: 1.6 }}>{imp}</p>
+                        <p style={{ fontSize: 13, color: "var(--c-text)", lineHeight: 1.6 }}>{improvementText(imp)}</p>
                       </div>
                     ))
                   )}
@@ -1660,12 +1787,41 @@ export default function UPSCEvaluator() {
                   <p style={{ fontSize: 11, fontWeight: 700, color: "var(--c-accent)", textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: "'JetBrains Mono',monospace" }}>Suggested Version</p>
                   <button onClick={() => setShowSuggestedView(false)} style={{ padding: 4, border: "none", background: "transparent", color: "var(--c-text-secondary)", cursor: "pointer", display: "flex", alignItems: "center" }}><IconX size={14} /></button>
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                  {renderSuggestedAnswer(suggestedAnswer)}
+
+                {/* Exam / Study mode toggle */}
+                <div style={{ display: "flex", borderBottom: "1px solid var(--c-border)", marginBottom: 12 }}>
+                  {([{ id: "exam" as const, label: "Exam version" }, { id: "study" as const, label: "Study version" }]).map(t => (
+                    <button
+                      key={t.id}
+                      className={`v3-tab${suggestMode === t.id ? " on" : ""}`}
+                      disabled={suggestLoading}
+                      onClick={() => { if (suggestMode !== t.id && !suggestLoading) fetchSuggestedAnswer(t.id); }}
+                      style={{ opacity: suggestLoading ? 0.6 : 1 }}
+                    >
+                      <span className="v3-tab-label">{t.label}</span>
+                    </button>
+                  ))}
                 </div>
-                <p style={{ marginTop: 14, fontSize: 11, color: "var(--c-text-tertiary)", fontFamily: "'JetBrains Mono',monospace" }}>
-                  {[...suggestedAnswer.matchAll(/\[(IMPROVED|ADDED)\]/g)].length} improvements applied
-                </p>
+
+                {suggestLoading ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "16px 0", color: "var(--c-text-secondary)", fontSize: 13 }}>
+                    <IconSpinner size={14} /> Generating {suggestMode === "study" ? "study" : "exam"} version...
+                  </div>
+                ) : (
+                  <>
+                    <p style={{ fontSize: 12, color: darkMode ? "#999999" : "#787774", marginBottom: 12, lineHeight: 1.5 }}>
+                      {withinWordLimit === false
+                        ? "This study version deliberately goes beyond the exam word limit so you can see more points and pick what to use. For a tight, exam-ready version, switch to Exam version."
+                        : "Exam version — kept within the word limit, the way you'd write it in the exam."}
+                    </p>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                      {renderSuggestedAnswer(suggestedAnswer)}
+                    </div>
+                    <p style={{ marginTop: 14, fontSize: 11, color: "var(--c-text-tertiary)", fontFamily: "'JetBrains Mono',monospace" }}>
+                      {[...suggestedAnswer.matchAll(/\[(IMPROVED|ADDED)\]/g)].length} improvements applied
+                    </p>
+                  </>
+                )}
               </div>
             )}
 
@@ -1726,7 +1882,7 @@ export default function UPSCEvaluator() {
                     Let me try first <IconArrowRight size={12} />
                   </button>
                   <button
-                    onClick={() => { setShowSuggestPrompt(false); fetchSuggestedAnswer(); track('suggested_answer_choice', { choice: 'show_me' }); }}
+                    onClick={() => { setShowSuggestPrompt(false); fetchSuggestedAnswer("exam"); track('suggested_answer_choice', { choice: 'show_me' }); }}
                     style={{ background: "none", border: "none", fontSize: 13, color: "var(--c-text-secondary)", cursor: "pointer", padding: 0 }}
                     onMouseEnter={e => e.currentTarget.style.color = "var(--c-text)"}
                     onMouseLeave={e => e.currentTarget.style.color = "var(--c-text-secondary)"}>
