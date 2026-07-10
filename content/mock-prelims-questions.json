@@ -1,158 +1,220 @@
 {
-  "meta": {
-    "default_time_per_question_seconds": 72,
-    "description": "Adapted from UPSC Prelims 2023/2024 PYQs and standard static-syllabus facts"
-  },
-  "questions": [
+  "question_sets": [
     {
-      "id": "pre-001",
-      "question": "Which Article of the Indian Constitution provides for the formation of new States and alteration of areas, boundaries, or names of existing States?",
-      "options": ["Article 2", "Article 3", "Article 4", "Article 5"],
-      "correct": 1,
-      "explanation": "Article 3 empowers Parliament to form new States, increase/decrease the area of any State, and alter State boundaries or names — by an ordinary majority, not a special majority.",
-      "subject": "Polity"
+      "id": "gs1-pyq-practice-1",
+      "label": "GS Paper I — Practice Set 1",
+      "paper": "GS1",
+      "source": "pyq",
+      "questions": [
+        {
+          "id": "gs1-pyq-1-1",
+          "question_text": "Which Article of the Indian Constitution provides for the formation of new States and alteration of areas, boundaries, or names of existing States?",
+          "options": { "a": "Article 2", "b": "Article 3", "c": "Article 4", "d": "Article 5" },
+          "correct_answer": "b",
+          "explanation": "Article 3 empowers Parliament to form new States, increase/decrease the area of any State, and alter State boundaries or names — by an ordinary majority, not a special majority.",
+          "subject": "Polity",
+          "syllabus_topic": "Union & State Territory — Article 3",
+          "marks": 2,
+          "difficulty": "moderate"
+        },
+        {
+          "id": "gs1-pyq-1-2",
+          "question_text": "The concept of 'Doctrine of Pleasure' in the Indian Constitution means:",
+          "options": {
+            "a": "The President can dismiss any civil servant at will",
+            "b": "High Court judges hold office during the pleasure of the Chief Justice",
+            "c": "Civil servants hold office during the pleasure of the President/Governor",
+            "d": "The Council of Ministers serves at the pleasure of Parliament"
+          },
+          "correct_answer": "c",
+          "explanation": "Article 310 states that civil servants (and defence services members) hold office during the pleasure of the President (or Governor for state services). However, Article 311 provides procedural safeguards against arbitrary dismissal.",
+          "subject": "Polity",
+          "syllabus_topic": "Civil Services — Articles 310-311",
+          "marks": 2,
+          "difficulty": "hard"
+        },
+        {
+          "id": "gs1-pyq-1-3",
+          "question_text": "With reference to the Parliament of India, consider the following statements:\n1. The Speaker of the Lok Sabha can vote only in case of a tie.\n2. The Speaker is elected by all members of Parliament.\nWhich of the statements given above is/are correct?",
+          "options": { "a": "1 only", "b": "2 only", "c": "Both 1 and 2", "d": "Neither 1 nor 2" },
+          "correct_answer": "a",
+          "explanation": "Statement 1 is correct — the Speaker has a casting vote only when the House is equally divided (Article 100). Statement 2 is incorrect — the Speaker is elected only by members of the Lok Sabha, not both Houses.",
+          "subject": "Polity",
+          "syllabus_topic": "Parliament — Speaker & Presiding Officers",
+          "marks": 2,
+          "difficulty": "moderate"
+        },
+        {
+          "id": "gs1-pyq-1-4",
+          "question_text": "The 'Battle of Plassey' (1757) was significant primarily because it:",
+          "options": {
+            "a": "Led to the expulsion of the French from India",
+            "b": "Marked the beginning of British political supremacy in Bengal",
+            "c": "Established the East India Company's monopoly over trade",
+            "d": "Led to the formation of the Subsidiary Alliance system"
+          },
+          "correct_answer": "b",
+          "explanation": "The Battle of Plassey (1757) established British political control over Bengal by defeating Siraj-ud-Daula with the help of Mir Jafar. It gave the Company revenue rights over Bengal, beginning British political supremacy in India.",
+          "subject": "History",
+          "syllabus_topic": "British Expansion — Bengal",
+          "marks": 2,
+          "difficulty": "easy"
+        },
+        {
+          "id": "gs1-pyq-1-5",
+          "question_text": "Which of the following Committees is associated with the decentralization of economic power and planning in India?",
+          "options": { "a": "Balwant Rai Mehta Committee", "b": "Ashok Mehta Committee", "c": "L M Singhvi Committee", "d": "G V K Rao Committee" },
+          "correct_answer": "d",
+          "explanation": "The G V K Rao Committee (1985) recommended decentralization of planning and greater devolution of power to PRIs. It called Panchayati Raj institutions 'grass without roots.' The Balwant Rai Mehta Committee (1957) first recommended a three-tier PRI system.",
+          "subject": "Polity",
+          "syllabus_topic": "Panchayati Raj & Decentralization",
+          "marks": 2,
+          "difficulty": "hard"
+        },
+        {
+          "id": "gs1-pyq-1-6",
+          "question_text": "Which Article of the Indian Constitution abolishes 'untouchability' and forbids its practice in any form?",
+          "options": { "a": "Article 14", "b": "Article 15", "c": "Article 17", "d": "Article 18" },
+          "correct_answer": "c",
+          "explanation": "Article 17 abolishes untouchability and makes its practice a punishable offence. This is an absolute right — it applies to both state and private actions, unlike most fundamental rights which only bind the State.",
+          "subject": "Polity",
+          "syllabus_topic": "Fundamental Rights — Article 17",
+          "marks": 2,
+          "difficulty": "easy"
+        },
+        {
+          "id": "gs1-pyq-1-7",
+          "question_text": "The Pradhan Mantri Fasal Bima Yojana (PMFBY) replaced which of the following schemes?",
+          "options": {
+            "a": "National Agricultural Insurance Scheme (NAIS) and Modified NAIS only",
+            "b": "NAIS, Modified NAIS, and Weather-based Crop Insurance Scheme",
+            "c": "Rashtriya Krishi Vikas Yojana",
+            "d": "Kisan Credit Card Scheme"
+          },
+          "correct_answer": "a",
+          "explanation": "PMFBY, launched in 2016, replaced NAIS (National Agricultural Insurance Scheme) and Modified NAIS. The Weather-based Crop Insurance Scheme (WBCIS) continues separately under a restructured framework.",
+          "subject": "Economy",
+          "syllabus_topic": "Agricultural Insurance Schemes",
+          "marks": 2,
+          "difficulty": "moderate"
+        },
+        {
+          "id": "gs1-pyq-1-8",
+          "question_text": "Consider the following about the Ramsar Convention:\n1. It deals specifically with wetlands of international importance.\n2. India is not a signatory to the convention.\n3. The Convention requires the designation of at least one wetland to the List of Wetlands of International Importance upon joining.\nWhich of the statements given above is/are correct?",
+          "options": { "a": "1 and 3 only", "b": "1 only", "c": "2 and 3 only", "d": "1, 2 and 3" },
+          "correct_answer": "a",
+          "explanation": "Statements 1 and 3 are correct. The Ramsar Convention (1971) focuses exclusively on wetland conservation. India is a signatory (joined 1982) — Statement 2 is wrong. Countries must designate at least one wetland upon accession.",
+          "subject": "Environment",
+          "syllabus_topic": "International Environmental Conventions",
+          "marks": 2,
+          "difficulty": "moderate"
+        }
+      ]
     },
     {
-      "id": "pre-002",
-      "question": "The concept of 'Doctrine of Pleasure' in the Indian Constitution means:",
-      "options": [
-        "The President can dismiss any civil servant at will",
-        "High Court judges hold office during the pleasure of the Chief Justice",
-        "Civil servants hold office during the pleasure of the President/Governor",
-        "The Council of Ministers serves at the pleasure of Parliament"
-      ],
-      "correct": 2,
-      "explanation": "Article 310 states that civil servants (and defence services members) hold office during the pleasure of the President (or Governor for state services). However, Article 311 provides procedural safeguards against arbitrary dismissal.",
-      "subject": "Polity"
-    },
-    {
-      "id": "pre-003",
-      "question": "With reference to the Parliament of India, consider the following statements:\n1. The Speaker of the Lok Sabha can vote only in case of a tie.\n2. The Speaker is elected by all members of Parliament.\nWhich of the statements given above is/are correct?",
-      "options": ["1 only", "2 only", "Both 1 and 2", "Neither 1 nor 2"],
-      "correct": 0,
-      "explanation": "Statement 1 is correct — the Speaker has a casting vote only when the House is equally divided (Article 100). Statement 2 is incorrect — the Speaker is elected only by members of the Lok Sabha, not both Houses.",
-      "subject": "Polity"
-    },
-    {
-      "id": "pre-004",
-      "question": "The 'Battle of Plassey' (1757) was significant primarily because it:",
-      "options": [
-        "Led to the expulsion of the French from India",
-        "Marked the beginning of British political supremacy in Bengal",
-        "Established the East India Company's monopoly over trade",
-        "Led to the formation of the Subsidiary Alliance system"
-      ],
-      "correct": 1,
-      "explanation": "The Battle of Plassey (1757) established British political control over Bengal by defeating Siraj-ud-Daula with the help of Mir Jafar. It gave the Company revenue rights over Bengal, beginning British political supremacy in India.",
-      "subject": "History"
-    },
-    {
-      "id": "pre-005",
-      "question": "Which of the following Committees is associated with the decentralization of economic power and planning in India?",
-      "options": ["Balwant Rai Mehta Committee", "Ashok Mehta Committee", "L M Singhvi Committee", "G V K Rao Committee"],
-      "correct": 3,
-      "explanation": "The G V K Rao Committee (1985) recommended decentralization of planning and greater devolution of power to PRIs. It called Panchayati Raj institutions 'grass without roots.' The Balwant Rai Mehta Committee (1957) first recommended a three-tier PRI system.",
-      "subject": "Governance"
-    },
-    {
-      "id": "pre-006",
-      "question": "Which Article of the Indian Constitution abolishes 'untouchability' and forbids its practice in any form?",
-      "options": ["Article 14", "Article 15", "Article 17", "Article 18"],
-      "correct": 2,
-      "explanation": "Article 17 abolishes untouchability and makes its practice a punishable offence. This is an absolute right — it applies to both state and private actions, unlike most fundamental rights which only bind the State.",
-      "subject": "Polity"
-    },
-    {
-      "id": "pre-007",
-      "question": "The Pradhan Mantri Fasal Bima Yojana (PMFBY) replaced which of the following schemes?",
-      "options": [
-        "National Agricultural Insurance Scheme (NAIS) and Modified NAIS only",
-        "NAIS, Modified NAIS, and Weather-based Crop Insurance Scheme",
-        "Rashtriya Krishi Vikas Yojana",
-        "Kisan Credit Card Scheme"
-      ],
-      "correct": 0,
-      "explanation": "PMFBY, launched in 2016, replaced NAIS (National Agricultural Insurance Scheme) and Modified NAIS. The Weather-based Crop Insurance Scheme (WBCIS) continues separately under a restructured framework.",
-      "subject": "Economy"
-    },
-    {
-      "id": "pre-008",
-      "question": "Consider the following about the Ramsar Convention:\n1. It deals specifically with wetlands of international importance.\n2. India is not a signatory to the convention.\n3. The Convention requires the designation of at least one wetland to the List of Wetlands of International Importance upon joining.\nWhich of the statements given above is/are correct?",
-      "options": ["1 and 3 only", "1 only", "2 and 3 only", "1, 2 and 3"],
-      "correct": 0,
-      "explanation": "Statements 1 and 3 are correct. The Ramsar Convention (1971) focuses exclusively on wetland conservation. India is a signatory (joined 1982) — Statement 2 is wrong. Countries must designate at least one wetland upon accession.",
-      "subject": "Environment"
-    },
-    {
-      "id": "pre-009",
-      "question": "Which of the following is/are considered a 'Greenhouse Gas' under the Kyoto Protocol?",
-      "options": [
-        "Carbon dioxide, Methane, and Nitrous oxide only",
-        "Carbon dioxide and Methane only",
-        "Carbon dioxide, Methane, Nitrous oxide, HFCs, PFCs, and SF6",
-        "Only Carbon dioxide"
-      ],
-      "correct": 2,
-      "explanation": "The Kyoto Protocol covers six greenhouse gases: CO₂, CH₄ (methane), N₂O (nitrous oxide), HFCs, PFCs, and SF₆ (sulphur hexafluoride). The 2012 Doha Amendment added NF₃ as a seventh.",
-      "subject": "Environment"
-    },
-    {
-      "id": "pre-010",
-      "question": "The 'Tropic of Cancer' does NOT pass through which of the following Indian States?",
-      "options": ["Gujarat", "Jharkhand", "Manipur", "Tripura"],
-      "correct": 2,
-      "explanation": "The Tropic of Cancer (23.5°N) passes through 8 Indian states: Gujarat, Rajasthan, Madhya Pradesh, Chhattisgarh, Jharkhand, West Bengal, Tripura, and Mizoram. Manipur lies further north and is NOT traversed.",
-      "subject": "Geography"
-    },
-    {
-      "id": "pre-011",
-      "question": "With reference to 'Inflation Targeting' in India, which of the following is correct?",
-      "options": [
-        "The RBI sets the inflation target independently",
-        "The Government sets the inflation target in consultation with RBI, and the RBI is responsible for achieving it",
-        "Parliament sets the inflation target by a resolution",
-        "The Finance Commission sets the inflation target every five years"
-      ],
-      "correct": 1,
-      "explanation": "Under the amended RBI Act (Section 45ZA), the Central Government determines the inflation target in consultation with RBI every five years. Currently the target is 4% CPI ±2%. The Monetary Policy Committee (MPC) is responsible for achieving it.",
-      "subject": "Economy"
-    },
-    {
-      "id": "pre-012",
-      "question": "Which of the following pairs is NOT correctly matched?\n(Satellite launch vehicle : Developing country)",
-      "options": [
-        "PSLV : India",
-        "Long March : China",
-        "Ariane : France (European consortium)",
-        "Falcon 9 : Russia"
-      ],
-      "correct": 3,
-      "explanation": "Falcon 9 is developed by SpaceX, a private American company (USA) — not Russia. Russia's main orbital launch vehicles include Soyuz and Proton. The other three pairings are correct.",
-      "subject": "Science & Technology"
-    },
-    {
-      "id": "pre-013",
-      "question": "The 'Galwan Valley' incident of 2020 occurred in which Union Territory?",
-      "options": ["Jammu & Kashmir", "Ladakh", "Himachal Pradesh", "Uttarakhand"],
-      "correct": 1,
-      "explanation": "The Galwan Valley, the site of the June 2020 India-China clash, is located in the Ladakh Union Territory near the Line of Actual Control (LAC). Ladakh was bifurcated from Jammu & Kashmir as a separate UT in October 2019.",
-      "subject": "Geography"
-    },
-    {
-      "id": "pre-014",
-      "question": "With reference to 'Mission Karmayogi', consider the following:\n1. It is a capacity-building programme for civil servants.\n2. It is implemented by the Department of Personnel and Training (DoPT).\n3. It includes the iGOT (Integrated Government Online Training) Karmayogi platform.\nWhich of the statements given above are correct?",
-      "options": ["1 and 2 only", "1 and 3 only", "2 and 3 only", "1, 2 and 3"],
-      "correct": 3,
-      "explanation": "All three statements are correct. Mission Karmayogi (2020) is a national programme for civil servants' capacity building. It is anchored by DoPT and includes the iGOT Karmayogi digital platform for online training and continuous learning.",
-      "subject": "Governance"
-    },
-    {
-      "id": "pre-015",
-      "question": "The 'Carbon Border Adjustment Mechanism (CBAM)' recently in the news has been implemented by:",
-      "options": ["United Nations Framework Convention on Climate Change (UNFCCC)", "European Union", "G20 countries collectively", "World Trade Organization (WTO)"],
-      "correct": 1,
-      "explanation": "The CBAM is a climate policy tool adopted by the European Union (effective 2023, full implementation 2026). It puts a carbon price on imports from outside the EU in emission-intensive sectors (steel, cement, aluminium, fertilizers, electricity, hydrogen) to prevent carbon leakage.",
-      "subject": "Economy"
+      "id": "gs1-pyq-practice-2",
+      "label": "GS Paper I — Practice Set 2",
+      "paper": "GS1",
+      "source": "pyq",
+      "questions": [
+        {
+          "id": "gs1-pyq-2-1",
+          "question_text": "Which of the following is/are considered a 'Greenhouse Gas' under the Kyoto Protocol?",
+          "options": {
+            "a": "Carbon dioxide, Methane, and Nitrous oxide only",
+            "b": "Carbon dioxide and Methane only",
+            "c": "Carbon dioxide, Methane, Nitrous oxide, HFCs, PFCs, and SF6",
+            "d": "Only Carbon dioxide"
+          },
+          "correct_answer": "c",
+          "explanation": "The Kyoto Protocol covers six greenhouse gases: CO₂, CH₄ (methane), N₂O (nitrous oxide), HFCs, PFCs, and SF₆ (sulphur hexafluoride). The 2012 Doha Amendment added NF₃ as a seventh.",
+          "subject": "Environment",
+          "syllabus_topic": "Climate Change — Kyoto Protocol",
+          "marks": 2,
+          "difficulty": "easy"
+        },
+        {
+          "id": "gs1-pyq-2-2",
+          "question_text": "The 'Tropic of Cancer' does NOT pass through which of the following Indian States?",
+          "options": { "a": "Gujarat", "b": "Jharkhand", "c": "Manipur", "d": "Tripura" },
+          "correct_answer": "c",
+          "explanation": "The Tropic of Cancer (23.5°N) passes through 8 Indian states: Gujarat, Rajasthan, Madhya Pradesh, Chhattisgarh, Jharkhand, West Bengal, Tripura, and Mizoram. Manipur lies further north and is NOT traversed.",
+          "subject": "Geography",
+          "syllabus_topic": "Physical Geography — Latitudes & Indian States",
+          "marks": 2,
+          "difficulty": "moderate"
+        },
+        {
+          "id": "gs1-pyq-2-3",
+          "question_text": "With reference to 'Inflation Targeting' in India, which of the following is correct?",
+          "options": {
+            "a": "The RBI sets the inflation target independently",
+            "b": "The Government sets the inflation target in consultation with RBI, and the RBI is responsible for achieving it",
+            "c": "Parliament sets the inflation target by a resolution",
+            "d": "The Finance Commission sets the inflation target every five years"
+          },
+          "correct_answer": "b",
+          "explanation": "Under the amended RBI Act (Section 45ZA), the Central Government determines the inflation target in consultation with RBI every five years. Currently the target is 4% CPI ±2%. The Monetary Policy Committee (MPC) is responsible for achieving it.",
+          "subject": "Economy",
+          "syllabus_topic": "Monetary Policy & RBI",
+          "marks": 2,
+          "difficulty": "moderate"
+        },
+        {
+          "id": "gs1-pyq-2-4",
+          "question_text": "Which of the following pairs is NOT correctly matched?\n(Satellite launch vehicle : Developing country)",
+          "options": {
+            "a": "PSLV : India",
+            "b": "Long March : China",
+            "c": "Ariane : France (European consortium)",
+            "d": "Falcon 9 : Russia"
+          },
+          "correct_answer": "d",
+          "explanation": "Falcon 9 is developed by SpaceX, a private American company (USA) — not Russia. Russia's main orbital launch vehicles include Soyuz and Proton. The other three pairings are correct.",
+          "subject": "Science & Technology",
+          "syllabus_topic": "Space Technology — Launch Vehicles",
+          "marks": 2,
+          "difficulty": "easy"
+        },
+        {
+          "id": "gs1-pyq-2-5",
+          "question_text": "The 'Galwan Valley' incident of 2020 occurred in which Union Territory?",
+          "options": { "a": "Jammu & Kashmir", "b": "Ladakh", "c": "Himachal Pradesh", "d": "Uttarakhand" },
+          "correct_answer": "b",
+          "explanation": "The Galwan Valley, the site of the June 2020 India-China clash, is located in the Ladakh Union Territory near the Line of Actual Control (LAC). Ladakh was bifurcated from Jammu & Kashmir as a separate UT in October 2019.",
+          "subject": "Geography",
+          "syllabus_topic": "Political Geography — UTs & Borders",
+          "marks": 2,
+          "difficulty": "easy"
+        },
+        {
+          "id": "gs1-pyq-2-6",
+          "question_text": "With reference to 'Mission Karmayogi', consider the following:\n1. It is a capacity-building programme for civil servants.\n2. It is implemented by the Department of Personnel and Training (DoPT).\n3. It includes the iGOT (Integrated Government Online Training) Karmayogi platform.\nWhich of the statements given above are correct?",
+          "options": { "a": "1 and 2 only", "b": "1 and 3 only", "c": "2 and 3 only", "d": "1, 2 and 3" },
+          "correct_answer": "d",
+          "explanation": "All three statements are correct. Mission Karmayogi (2020) is a national programme for civil servants' capacity building. It is anchored by DoPT and includes the iGOT Karmayogi digital platform for online training and continuous learning.",
+          "subject": "Polity",
+          "syllabus_topic": "Civil Service Capacity Building",
+          "marks": 2,
+          "difficulty": "moderate"
+        },
+        {
+          "id": "gs1-pyq-2-7",
+          "question_text": "The 'Carbon Border Adjustment Mechanism (CBAM)' recently in the news has been implemented by:",
+          "options": {
+            "a": "United Nations Framework Convention on Climate Change (UNFCCC)",
+            "b": "European Union",
+            "c": "G20 countries collectively",
+            "d": "World Trade Organization (WTO)"
+          },
+          "correct_answer": "b",
+          "explanation": "The CBAM is a climate policy tool adopted by the European Union (effective 2023, full implementation 2026). It puts a carbon price on imports from outside the EU in emission-intensive sectors (steel, cement, aluminium, fertilizers, electricity, hydrogen) to prevent carbon leakage.",
+          "subject": "Economy",
+          "syllabus_topic": "International Trade & Climate Policy",
+          "marks": 2,
+          "difficulty": "easy"
+        }
+      ]
     }
   ]
 }
