@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
 import { track } from '@vercel/analytics';
+import { useTheme } from "./ThemeProvider";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    SAMPLE DATA
@@ -797,10 +798,10 @@ function renderHighlightedText(text: string, diffs: DiffItem[]) {
 export default function UPSCEvaluator() {
 
   /* ── navigation ── */
+  const { darkMode } = useTheme();
   const [screen, setScreen] = useState<Screen>("entry");
   const [entryTab, setEntryTab] = useState<EntryTab>("pyq");
   const [resultTab, setResultTab] = useState<ResultTab>("scores");
-  const [darkMode, setDarkMode] = useState(true);
 
   /* ── V3 entry mode ── */
   const [entryMode, setEntryMode] = useState<"upload" | "practice" | null>(null);
@@ -1099,15 +1100,9 @@ export default function UPSCEvaluator() {
     setSuggestLoading(false);
   };
 
-  /* ── theme vars ── */
-  /* CSS vars now come from globals.css via html.dark class — no inline themeStyle needed */
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [darkMode]);
+  /* ── theme ── */
+  /* Theme now comes from the global ThemeProvider (see ./ThemeProvider) —
+     this component only reads darkMode, it never sets the html.dark class. */
 
   /* ── global CSS ── */
   const css = `
@@ -1163,15 +1158,12 @@ export default function UPSCEvaluator() {
       <div className="site-wrap">
       <main style={{ maxWidth: showSidebar ? 1080 : 860, padding: 0 }}>
 
-        {/* Utility controls — dark mode + new answer */}
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, padding: "16px 0 0" }}>
-          {screen !== "entry" && (
+        {/* Utility controls — new answer (theme toggle now lives only in the Nav) */}
+        {screen !== "entry" && (
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, padding: "16px 0 0" }}>
             <button onClick={() => setScreen("entry")} style={{ padding: "5px 12px", borderRadius: 4, border: "1px solid var(--c-border)", background: "transparent", fontSize: 13, color: "var(--c-text-secondary)", fontFamily: "inherit" }}>New answer</button>
-          )}
-          <button onClick={() => setDarkMode(d => !d)} style={{ width: 32, height: 32, borderRadius: 4, border: "1px solid var(--c-border)", background: "transparent", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--c-text-secondary)" }}>
-            {darkMode ? <IconSun /> : <IconMoon />}
-          </button>
-        </div>
+          </div>
+        )}
 
         <div className={showSidebar ? "evaluator-shell" : undefined}>
         <div>

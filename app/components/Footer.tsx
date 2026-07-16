@@ -1,12 +1,12 @@
 import Link from "next/link";
+import EmailCapture from "./EmailCapture";
 
 const COLS = [
   {
     heading: "Product",
     links: [
-      { href: "/evaluate", label: "Evaluate" },
-      { href: "/mock-prelims", label: "Mock Prelims" },
-      { href: "/mock-mains", label: "Mock Mains" },
+      { href: "/prelims", label: "Prelims" },
+      { href: "/mains", label: "Mains" },
     ],
   },
   {
@@ -21,7 +21,7 @@ const COLS = [
     links: [
       { href: "/blog", label: "Blog" },
       { href: "/updates", label: "Updates" },
-      { href: "/mock-prelims", label: "Sample Questions" },
+      { href: "/prelims", label: "Sample Questions" },
     ],
   },
 ];
@@ -43,16 +43,7 @@ export default function Footer() {
           </div>
           <div>
             <p style={{ fontSize: 11, color: "var(--ink-muted)", marginBottom: 10, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.06em" }}>Get UPSC prep insights in your inbox</p>
-            <div style={{ display: "flex", gap: 8 }}>
-              <input
-                type="email"
-                placeholder="you@gmail.com"
-                style={{ flex: 1, padding: "8px 12px", border: "1px solid var(--hairline)", borderRadius: 4, background: "var(--surface)", color: "var(--ink)", fontSize: 13, fontFamily: "inherit", outline: "none" }}
-              />
-              <button style={{ padding: "8px 16px", borderRadius: 4, background: "var(--accent)", color: "var(--accent-ink)", fontSize: 13, fontWeight: 600, border: "none", cursor: "pointer", fontFamily: "inherit" }}>
-                Subscribe
-              </button>
-            </div>
+            <EmailCapture />
           </div>
         </div>
 

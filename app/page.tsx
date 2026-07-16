@@ -216,8 +216,8 @@ export default function HomePage() {
               <p style={{ fontSize: 13, color: "var(--ink-faint)", fontStyle: "italic" }}>
                 Prelims practice is available now. Subject-level tracking comes with accounts.
               </p>
-              <Link href="/mock-prelims" style={{ display: "inline-block", marginTop: 20, fontSize: 13, color: "var(--accent)", textDecoration: "none", fontWeight: 500 }}>
-                Try Mock Prelims →
+              <Link href="/prelims" style={{ display: "inline-block", marginTop: 20, fontSize: 13, color: "var(--accent)", textDecoration: "none", fontWeight: 500 }}>
+                Practise Prelims →
               </Link>
             </div>
             <div style={{ paddingLeft: 48, borderLeft: "1px solid var(--hairline)" }}>

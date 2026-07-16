@@ -131,6 +131,13 @@ body {
 .nav-link:hover { color: var(--ink); }
 .nav-link.active { color: var(--ink); font-weight: 500; border-bottom-color: var(--accent); }
 
+.nav-desktop { display: flex; }
+.nav-hamburger { display: none; }
+@media (max-width: 820px) {
+  .nav-desktop { display: none; }
+  .nav-hamburger { display: flex; }
+}
+
 /* ─── Marketing sections ──────────────────────────────────────────── */
 .section { padding: 88px 0; }
 .section + .section { border-top: 1px solid var(--hairline); }

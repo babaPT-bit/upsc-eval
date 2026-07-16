@@ -1,5 +1,6 @@
 "use client";
-import { useState, useCallback } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Nav from "../components/Nav";
 import Footer from "../components/Footer";
 import CountdownTimer from "../components/CountdownTimer";
@@ -109,7 +110,18 @@ const SOURCE_CARDS: { id: SourceCard; label: string; desc: string; icon: (p: { s
 ];
 
 /* ── Component ───────────────────────────────────────────────────────────── */
+// useSearchParams() requires a Suspense boundary for static rendering — the
+// actual page logic lives in the inner component, wrapped below.
 export default function MockPrelimsPage() {
+  return (
+    <Suspense fallback={null}>
+      <MockPrelimsPageInner />
+    </Suspense>
+  );
+}
+
+function MockPrelimsPageInner() {
+  const searchParams = useSearchParams();
   const [phase, setPhase] = useState<Phase>("setup");
   const [mode, setMode] = useState<Mode>("knowledge");
 
@@ -117,6 +129,22 @@ export default function MockPrelimsPage() {
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [questionCount, setQuestionCount] = useState<number>(10);
   const [sourceCard, setSourceCard] = useState<SourceCard>("compiled");
+
+  // Deep-link preselect from the Prelims hub cards (/prelims). Additive and
+  // safe: with no query params present, none of these branches fire and
+  // behavior is unchanged from a plain visit to /mock-prelims.
+  useEffect(() => {
+    const modeParam = searchParams.get("mode");
+    const sourceParam = searchParams.get("source");
+    if (modeParam === "knowledge" || modeParam === "mock") {
+      setMode(modeParam);
+    } else if (sourceParam === "pyq") {
+      setMode("knowledge");
+    }
+    if (sourceParam === "pyq") {
+      setSourceCard("pyq");
+    }
+  }, [searchParams]);
 
   // Session state (shared by both modes)
   const [questions, setQuestions] = useState<PrelimsQuestion[]>([]);
