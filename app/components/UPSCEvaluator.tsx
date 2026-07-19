@@ -839,6 +839,12 @@ export default function UPSCEvaluator() {
   const [dragActive, setDragActive] = useState(false);
   const pdfRef = useRef<HTMLInputElement>(null);
 
+  /* ── annotated sheet download ── */
+  const [annotating, setAnnotating] = useState(false);
+  const [annotateError, setAnnotateError] = useState<string | null>(null);
+  // "info" = expected low-scan-quality case (422) — not alarming. "error" = generic failure.
+  const [annotateErrorSeverity, setAnnotateErrorSeverity] = useState<"info" | "error">("info");
+
   /* ── submitted content (persists across screen changes) ── */
   const [submittedText, setSubmittedText] = useState("");
   const [submittedQuestion, setSubmittedQuestion] = useState("");
@@ -1056,6 +1062,49 @@ export default function UPSCEvaluator() {
     navigator.clipboard.writeText(`My UPSC Mains answer scored ${result.percentage}% (${result.overallScore}/${result.maxScore}) — evaluated by UPSCEval.`);
     setShareMsg("Copied!"); setTimeout(() => setShareMsg(""), 2000);
     track('score_shared');
+  };
+
+  // Re-runs the FULL evaluation pipeline server-side (OCR + both agents +
+  // calibration) — no way to reuse the evaluation already on screen. ~25-35s.
+  // Only ever fires on explicit click, never automatically.
+  const doAnnotate = async () => {
+    if (!pdfFile) return;
+    setAnnotating(true);
+    setAnnotateError(null);
+    track('annotate_requested');
+    try {
+      const formData = new FormData();
+      formData.append("file", pdfFile);
+      const response = await fetch("https://PranshuT-upsc-answer-evaluator.hf.space/annotate", {
+        method: "POST",
+        body: formData,
+      });
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "marked-up-answer.pdf";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        track('annotate_downloaded');
+      } else if (response.status === 422) {
+        const data = await response.json();
+        setAnnotateErrorSeverity("info");
+        setAnnotateError(data?.detail || "Couldn't read this scan clearly enough to mark it up.");
+      } else {
+        setAnnotateErrorSeverity("error");
+        setAnnotateError("Couldn't generate the marked-up sheet. Please try again.");
+      }
+    } catch (err) {
+      console.error("Annotate error:", err);
+      setAnnotateErrorSeverity("error");
+      setAnnotateError("Couldn't generate the marked-up sheet. Please try again.");
+    } finally {
+      setAnnotating(false);
+    }
   };
 
 
@@ -1817,8 +1866,13 @@ export default function UPSCEvaluator() {
               </div>
             )}
 
-            {/* Action row — bordered compact buttons */}
+            {/* Action row — primary "Rewrite & improve" leads, rest are bordered compact buttons */}
             <div style={{ marginTop: 24, display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button
+                onClick={() => { doRetryWrite(); track('retry_from_results', { percentage: result?.percentage ?? 0 }); }}
+                style={{ padding: "9px 20px", borderRadius: 6, border: "none", background: "var(--c-accent)", color: "#ffffff", fontSize: 13.5, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+                Rewrite &amp; improve →
+              </button>
               <button
                 onClick={() => { setShowSuggestPrompt(p => !p); track('suggested_answer_requested'); }}
                 disabled={suggestLoading}
@@ -1828,6 +1882,16 @@ export default function UPSCEvaluator() {
                 {suggestLoading && <IconSpinner size={12} />}
                 Model answer
               </button>
+              {entryMode === "upload" && pdfFile && (
+                <button
+                  onClick={doAnnotate}
+                  disabled={annotating}
+                  style={{ padding: "7px 16px", borderRadius: 6, border: "1px solid var(--c-border)", background: "transparent", color: "var(--c-text-secondary)", fontSize: 13, cursor: annotating ? "default" : "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center", gap: 6, opacity: annotating ? 0.65 : 1 }}
+                  onMouseEnter={e => { if (!annotating) e.currentTarget.style.borderColor = "var(--c-text-tertiary)"; }}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = "var(--c-border)"}>
+                  {annotating ? (<><IconSpinner size={12} /> Marking up your sheet…</>) : "Download marked-up sheet"}
+                </button>
+              )}
               <a
                 href={`https://tally.so/r/WO1Llk?score=${result?.percentage ?? 0}`}
                 target="_blank"
@@ -1846,6 +1910,18 @@ export default function UPSCEvaluator() {
                 {shareMsg || "Share result"}
               </button>
             </div>
+
+            {annotateError && (
+              <p style={{ marginTop: 10, fontSize: 12, color: annotateErrorSeverity === "error" ? "var(--c-red)" : "var(--c-text-secondary)", display: "flex", alignItems: "center", gap: 8 }}>
+                {annotateError}
+                <button
+                  onClick={() => setAnnotateError(null)}
+                  aria-label="Dismiss"
+                  style={{ border: "none", background: "transparent", color: "var(--c-text-tertiary)", cursor: "pointer", padding: 0, display: "inline-flex", alignItems: "center" }}>
+                  <IconX size={11} />
+                </button>
+              </p>
+            )}
 
             {/* Early access link */}
             <p style={{ marginTop: 14, fontSize: "0.8rem", color: "var(--c-text-secondary)" }}>
