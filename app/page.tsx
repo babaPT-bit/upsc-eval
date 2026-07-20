@@ -5,6 +5,20 @@ import EmailCapture from "./components/EmailCapture";
 
 const COACH_LABEL = "your coach";
 
+/* ─── Hero preview card: illustrative sample data only ──────────────── */
+function pctColor(p: number) {
+  return p >= 75 ? "var(--success)" : p >= 50 ? "var(--warning)" : "var(--danger)";
+}
+const PREVIEW_DIMENSIONS = [
+  { name: "Question Comprehension", score: 8 },
+  { name: "Factual Accuracy", score: 7 },
+  { name: "Answer Structure", score: 5 },
+  { name: "Analytical Depth", score: 7 },
+];
+const PREVIEW_MAX = PREVIEW_DIMENSIONS.length * 10;
+const PREVIEW_SCORE = PREVIEW_DIMENSIONS.reduce((sum, d) => sum + d.score, 0);
+const PREVIEW_PCT = Math.round((PREVIEW_SCORE / PREVIEW_MAX) * 100);
+
 /* ─── Section 4: comparison rows ───────────────────────────────────── */
 const CMP_ROWS: [string, string, string, boolean?][] = [
   ["Scoring", "Vague 7/10 with no rubric", "7 dimensions mapped to UPSC marking scheme"],
@@ -28,36 +42,76 @@ export default function HomePage() {
       {/* ── SECTION 1: HERO ─────────────────────────────────────────── */}
       <section style={{ padding: "88px 0 80px" }}>
         <div className="site-wrap">
-          <span className="eyebrow">Personalised UPSC prep</span>
-          <h1 style={{
-            fontFamily: "var(--font-display)", fontWeight: 700,
-            fontSize: "var(--text-4xl)", lineHeight: 1.05,
-            letterSpacing: "-0.02em", color: "var(--ink)",
-            marginBottom: 20, maxWidth: 700,
-          }}>
-            Every brain is different.<br />Why train the same?
-          </h1>
-          <p style={{ fontSize: 16, color: "var(--ink-muted)", lineHeight: 1.75, maxWidth: 560, marginBottom: 32 }}>
-            Toppers didn't prep generically — they found their own weak spots and drilled them.
-            Abhyaas is an examiner-grade evaluator that learns how <em>you</em> lose marks and coaches that,
-            across every answer you write. For Prelims and Mains.
-          </p>
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            <Link href="/evaluate" style={{
-              padding: "12px 24px", borderRadius: 4,
-              background: "var(--accent)", color: "var(--accent-ink)",
-              fontSize: 14, fontWeight: 600, textDecoration: "none",
-            }}>
-              Evaluate an answer →
-            </Link>
-            <a href="#how-it-works" style={{
-              padding: "12px 24px", borderRadius: 4,
-              border: "1px solid var(--hairline)", background: "transparent",
-              color: "var(--ink-muted)", fontSize: 14, fontWeight: 500,
-              textDecoration: "none",
-            }}>
-              See how it works
-            </a>
+          <div className="hero-grid" style={{ display: "flex", gap: 56, alignItems: "center" }}>
+            <div style={{ flex: "1 1 480px", minWidth: 0 }}>
+              <span className="eyebrow">Personalised UPSC prep</span>
+              <h1 style={{
+                fontFamily: "var(--font-display)", fontWeight: 700,
+                fontSize: "var(--text-4xl)", lineHeight: 1.05,
+                letterSpacing: "-0.02em", color: "var(--ink)",
+                marginBottom: 20, maxWidth: 700,
+              }}>
+                Every brain is different.<br />Why train the same?
+              </h1>
+              <p style={{ fontSize: 16, color: "var(--ink-muted)", lineHeight: 1.75, maxWidth: 560, marginBottom: 32 }}>
+                Toppers didn't prep generically — they found their own weak spots and drilled them.
+                Abhyaas is an examiner-grade evaluator that learns how <em>you</em> lose marks and coaches that,
+                across every answer you write. For Prelims and Mains.
+              </p>
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                <Link href="/evaluate" style={{
+                  padding: "12px 24px", borderRadius: 4,
+                  background: "var(--accent)", color: "var(--accent-ink)",
+                  fontSize: 14, fontWeight: 600, textDecoration: "none",
+                }}>
+                  Evaluate an answer →
+                </Link>
+                <a href="#how-it-works" style={{
+                  padding: "12px 24px", borderRadius: 4,
+                  border: "1px solid var(--hairline)", background: "transparent",
+                  color: "var(--ink-muted)", fontSize: 14, fontWeight: 500,
+                  textDecoration: "none",
+                }}>
+                  See how it works
+                </a>
+              </div>
+            </div>
+
+            {/* Hero preview card — code-rendered, illustrative sample data, not a real screenshot */}
+            <div style={{ flex: "1 1 320px", minWidth: 0, maxWidth: 360 }}>
+              <div style={{ border: "1px solid var(--hairline)", borderRadius: 8, background: "var(--surface)", padding: 22, boxShadow: "0 2px 8px rgba(31,27,22,0.06)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16, paddingBottom: 16, borderBottom: "1px solid var(--hairline)" }}>
+                  <span style={{ fontFamily: "var(--font-display)", fontSize: 34, fontWeight: 700, color: pctColor(PREVIEW_PCT), lineHeight: 1 }}>
+                    {PREVIEW_PCT}%
+                  </span>
+                  <div>
+                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--ink-muted)" }}>
+                      {PREVIEW_SCORE} <span style={{ color: "var(--ink-faint)" }}>/ {PREVIEW_MAX}</span>
+                    </div>
+                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-faint)", marginTop: 2 }}>
+                      GS2 · Score
+                    </div>
+                  </div>
+                </div>
+                <p style={{ fontSize: 12, color: "var(--ink-muted)", fontStyle: "italic", lineHeight: 1.6, marginBottom: 16 }}>
+                  &ldquo;Solid grasp of the directive, but the answer needs a sharper conclusion and one more example to reach full marks.&rdquo;
+                </p>
+                {PREVIEW_DIMENSIONS.map(d => (
+                  <div key={d.name} style={{ marginBottom: 10 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                      <span style={{ fontSize: 12, color: "var(--ink-muted)" }}>{d.name}</span>
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ink-faint)" }}>{d.score}/10</span>
+                    </div>
+                    <div style={{ height: 3, background: "var(--hairline)", borderRadius: 2 }}>
+                      <div style={{ height: "100%", width: `${d.score * 10}%`, background: pctColor(d.score * 10), borderRadius: 2 }} />
+                    </div>
+                  </div>
+                ))}
+                <p style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "var(--ink-faint)", marginTop: 14, textAlign: "right" }}>
+                  Illustrative example
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -112,7 +166,7 @@ export default function HomePage() {
           }}>
             A loop that gets to know you
           </h2>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 0 }}>
+          <div className="loop-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 0 }}>
             {[
               { num: "01", title: "Write an answer", desc: "Type directly, or upload a photo of your handwritten sheet. Abhyaas reads your writing." },
               { num: "02", title: "Get examiner-grade evaluation", desc: "Key points, directive compliance, factual errors, calibrated score — not a vague 7/10." },
@@ -202,7 +256,7 @@ export default function HomePage() {
           }}>
             It learns you differently for each paper
           </h2>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>
+          <div className="prelims-mains-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>
             <div style={{ paddingRight: 48 }}>
               <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--accent)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Prelims</div>
               <h3 style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: "var(--text-xl)", color: "var(--ink)", marginBottom: 16, lineHeight: 1.3 }}>
@@ -282,7 +336,7 @@ export default function HomePage() {
               <Link href="/blog" style={{ fontSize: 13, color: "var(--ink-muted)", textDecoration: "none" }}>All posts →</Link>
             </div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>
+          <div className="blog-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>
             {BLOG_POSTS.map((p, i) => (
               <Link
                 key={p.slug}

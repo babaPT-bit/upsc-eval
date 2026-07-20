@@ -155,6 +155,48 @@ body {
 .cmp-table th { font-size: 12px; font-family: var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-muted); font-weight: 500; }
 .cmp-table tr:nth-child(even) td { background: var(--surface); }
 
+/* ─── Fixed-grid sections: mobile stacking ───────────────────────────── */
+@media (max-width: 768px) {
+  .hero-grid {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: 32px !important;
+  }
+  .hero-grid > div:last-child {
+    max-width: 100% !important;
+  }
+
+  .loop-grid,
+  .prelims-mains-grid,
+  .blog-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .loop-grid > div {
+    padding: 24px 0 !important;
+    border-right: none !important;
+  }
+  .loop-grid > div:not(:first-child) {
+    border-top: 1px solid var(--hairline);
+  }
+
+  .prelims-mains-grid > div {
+    padding: 24px 0 !important;
+    border-left: none !important;
+  }
+  .prelims-mains-grid > div:not(:first-child) {
+    border-top: 1px solid var(--hairline);
+  }
+
+  .blog-grid > a {
+    padding: 24px 0 !important;
+    border-left: none !important;
+  }
+  .blog-grid > a:not(:first-child) {
+    border-top: 1px solid var(--hairline);
+  }
+}
+
 /* ─── Blog / post list ────────────────────────────────────────────── */
 .post-row {
   display: flex;
