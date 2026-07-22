@@ -1,6 +1,5 @@
 "use client";
-import { Suspense, useCallback, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState, useMemo } from "react";
 import Nav from "../components/Nav";
 import Footer from "../components/Footer";
 import CountdownTimer from "../components/CountdownTimer";
@@ -12,20 +11,20 @@ type OptionKey = "a" | "b" | "c" | "d";
 interface PrelimsQuestion {
   question_id: string;
   question_text: string;
-  options: Record<OptionKey, string>;
+  options: { a: string; b: string; c: string; d: string };
   correct_answer: OptionKey | null;
   explanation: string | null;
   paper: string;
   subject: string;
   syllabus_topic: string;
-  source_type: string;
+  source_type: "pyq" | "mock" | "generated";
   source_detail: string;
-  marks: number;
+  marks: number | null;
   difficulty: string | null;
   answer_verified: boolean;
 }
 
-interface QuestionSet {
+interface PrelimsSet {
   id: string;
   label: string;
   paper: string;
@@ -34,18 +33,14 @@ interface QuestionSet {
 }
 
 type Mode = "knowledge" | "mock";
-type SourceCard = "pyq" | "compiled" | "mixed";
 type Phase = "setup" | "answering" | "reviewed";
+type SourceFilter = "pyq" | "compiled" | "mix";
 
-const ALL_SETS = prelimsData.question_sets as QuestionSet[];
-const ALL_QUESTIONS: PrelimsQuestion[] = ALL_SETS.flatMap(s => s.questions);
+const SETS = (prelimsData as { question_sets: PrelimsSet[] }).question_sets;
+const ALL_QUESTIONS: PrelimsQuestion[] = SETS.flatMap(s => s.questions);
+const ALL_SUBJECTS = Array.from(new Set(ALL_QUESTIONS.map(q => q.subject))).sort();
 
-// Data-driven — pull the full subject list from what's actually in the seed data, not a hardcoded guess.
-const SUBJECT_CHIPS = Array.from(new Set(ALL_QUESTIONS.map(q => q.subject))).sort();
-const QUESTION_COUNTS = [10, 25, 50] as const;
-
-// Real UPSC Prelims GS1 pacing: 200 marks / 100 questions in 120 minutes ≈ 72s/question.
-const SECONDS_PER_QUESTION = 72;
+const MOCK_DURATION_MINUTES = 120; // matches the printed "Time Allowed: Two Hours" on the source booklets
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -56,166 +51,120 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-function sourceCardMatches(sourceType: string, card: SourceCard): boolean {
-  if (card === "mixed") return true;
-  if (card === "pyq") return sourceType === "pyq";
-  return sourceType === "compiled" || sourceType === "generated"; // "Abhyaas compiled"
-}
-
-// Same grading thresholds as EvalResultCard.tsx — do not diverge from this scheme.
-const pctColor = (p: number) => p >= 75 ? "var(--success)" : p >= 50 ? "var(--warning)" : "var(--danger)";
-
-/* ── Minimal inline icons (matches the app's hand-rolled stroke-icon style) ── */
-function IconCertificate({ size = 18 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="4" width="18" height="13" rx="2" />
-      <circle cx="12" cy="9.5" r="2" />
-      <path d="M9 20l1.5-3h3L15 20" />
-    </svg>
-  );
-}
-function IconStack({ size = 18 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 3l9 5-9 5-9-5 9-5z" />
-      <path d="M3 13l9 5 9-5" />
-      <path d="M3 18l9 5 9-5" />
-    </svg>
-  );
-}
-function IconGrid({ size = 18 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="3" width="7" height="7" rx="1" />
-      <rect x="14" y="3" width="7" height="7" rx="1" />
-      <rect x="3" y="14" width="7" height="7" rx="1" />
-      <rect x="14" y="14" width="7" height="7" rx="1" />
-    </svg>
-  );
-}
-function IconChevron({ size = 14, rotated }: { size?: number; rotated: boolean }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-      style={{ transform: rotated ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.15s", flexShrink: 0 }}>
-      <polyline points="9 18 15 12 9 6" />
-    </svg>
-  );
-}
-
-const SOURCE_CARDS: { id: SourceCard; label: string; desc: string; icon: (p: { size?: number }) => React.JSX.Element }[] = [
-  { id: "pyq", label: "Previous year papers", desc: "Actual UPSC questions, exact wording", icon: IconCertificate },
-  { id: "compiled", label: "Abhyaas compiled", desc: "PYQs plus questions built and checked against our syllabus knowledge base", icon: IconStack },
-  { id: "mixed", label: "Full mix", desc: "Both sources combined, widest coverage", icon: IconGrid },
-];
-
 /* ── Component ───────────────────────────────────────────────────────────── */
-// useSearchParams() requires a Suspense boundary for static rendering — the
-// actual page logic lives in the inner component, wrapped below.
 export default function MockPrelimsPage() {
-  return (
-    <Suspense fallback={null}>
-      <MockPrelimsPageInner />
-    </Suspense>
-  );
-}
-
-function MockPrelimsPageInner() {
-  const searchParams = useSearchParams();
   const [phase, setPhase] = useState<Phase>("setup");
   const [mode, setMode] = useState<Mode>("knowledge");
 
-  // Knowledge test config
+  // Setup — knowledge test controls
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
-  const [questionCount, setQuestionCount] = useState<number>(10);
-  const [sourceCard, setSourceCard] = useState<SourceCard>("compiled");
+  const [questionCount, setQuestionCount] = useState<10 | 25 | 50>(10);
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>("compiled");
 
-  // Deep-link preselect from the Prelims hub cards (/prelims). Additive and
-  // safe: with no query params present, none of these branches fire and
-  // behavior is unchanged from a plain visit to /mock-prelims.
-  useEffect(() => {
-    const modeParam = searchParams.get("mode");
-    const sourceParam = searchParams.get("source");
-    if (modeParam === "knowledge" || modeParam === "mock") {
-      setMode(modeParam);
-    } else if (sourceParam === "pyq") {
-      setMode("knowledge");
-    }
-    if (sourceParam === "pyq") {
-      setSourceCard("pyq");
-    }
-  }, [searchParams]);
+  // Setup — mock test controls
+  const [selectedSetId, setSelectedSetId] = useState<string | null>(null);
 
-  // Session state (shared by both modes)
-  const [questions, setQuestions] = useState<PrelimsQuestion[]>([]);
+  // Active session
+  const [activeQuestions, setActiveQuestions] = useState<PrelimsQuestion[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, OptionKey | null>>({});
-  const [timedOut, setTimedOut] = useState(false);
-  const [totalSeconds, setTotalSeconds] = useState(0);
+  const [answers, setAnswers] = useState<Record<string, OptionKey>>({});
   const [timerKey, setTimerKey] = useState(0);
-  const [expandedExplanations, setExpandedExplanations] = useState<Record<string, boolean>>({});
-  const [expandedSubjects, setExpandedSubjects] = useState<Record<string, boolean>>({});
+  const [timerExpired, setTimerExpired] = useState(false);
 
-  const toggleSubject = (s: string) => {
-    setSelectedSubjects(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
+  // Reviewed — weakness map accordion
+  const [expandedSubject, setExpandedSubject] = useState<string | null>(null);
+
+  const toggleSubjectChip = (subj: string) => {
+    setSelectedSubjects(prev => prev.includes(subj) ? prev.filter(s => s !== subj) : [...prev, subj]);
   };
-
-  const knowledgePool = selectedSubjects.length === 0
-    ? []
-    : ALL_QUESTIONS.filter(q => selectedSubjects.includes(q.subject) && sourceCardMatches(q.source_type, sourceCard));
 
   const startKnowledgeTest = () => {
-    const selected = shuffle(knowledgePool).slice(0, questionCount);
-    setQuestions(selected);
-    setAnswers(Object.fromEntries(selected.map(q => [q.question_id, null])));
-    setCurrentIdx(0);
-    setTimedOut(false);
-    setExpandedExplanations({});
-    setExpandedSubjects({});
-    setPhase("answering");
+    const pool = ALL_QUESTIONS.filter(q => {
+      const subjectOk = selectedSubjects.length === 0 || selectedSubjects.includes(q.subject);
+      const sourceOk =
+        sourceFilter === "mix" ? true :
+        sourceFilter === "pyq" ? q.source_type === "pyq" :
+        q.source_type === "mock" || q.source_type === "generated";
+      return subjectOk && sourceOk;
+    });
+    const picked = shuffle(pool).slice(0, questionCount);
+    beginSession(picked);
   };
 
-  const startMockTest = (set: QuestionSet) => {
-    const selected = shuffle(set.questions);
-    setQuestions(selected);
-    setAnswers(Object.fromEntries(selected.map(q => [q.question_id, null])));
+  const startMockTest = () => {
+    const set = SETS.find(s => s.id === selectedSetId);
+    if (!set) return;
+    beginSession(set.questions);
+  };
+
+  const beginSession = (questions: PrelimsQuestion[]) => {
+    setActiveQuestions(questions);
     setCurrentIdx(0);
-    setTimedOut(false);
-    setTotalSeconds(selected.length * SECONDS_PER_QUESTION);
+    setAnswers({});
+    setTimerExpired(false);
     setTimerKey(k => k + 1);
-    setExpandedExplanations({});
-    setExpandedSubjects({});
+    setExpandedSubject(null);
     setPhase("answering");
   };
 
-  const handleExpire = useCallback(() => {
-    setTimedOut(true);
-    setPhase("reviewed");
-  }, []);
+  const currentQ = activeQuestions[currentIdx] ?? null;
+  const isLast = currentIdx === activeQuestions.length - 1;
 
-  const selectOption = (qId: string, key: OptionKey) => {
-    setAnswers(prev => ({ ...prev, [qId]: key }));
+  const selectOption = (choice: OptionKey) => {
+    if (!currentQ) return;
+    setAnswers(prev => ({ ...prev, [currentQ.question_id]: choice }));
   };
 
-  const submit = () => setPhase("reviewed");
-
-  const retrySameQuestions = () => {
-    if (mode === "mock") {
-      const asSet: QuestionSet = { id: "retry", label: "Retry", paper: "", source: "mock", questions };
-      startMockTest(asSet);
+  const goNext = () => {
+    if (isLast) {
+      setPhase("reviewed");
     } else {
-      const selected = shuffle(questions);
-      setQuestions(selected);
-      setAnswers(Object.fromEntries(selected.map(q => [q.question_id, null])));
-      setCurrentIdx(0);
-      setTimedOut(false);
-      setExpandedExplanations({});
-      setExpandedSubjects({});
-      setPhase("answering");
+      setCurrentIdx(i => i + 1);
     }
   };
 
-  /* ── Setup ───────────────────────────────────────────────────────────── */
+  const goBack = () => {
+    if (currentIdx > 0) setCurrentIdx(i => i - 1);
+  };
+
+  /* ── Grouped weakness map (subject -> topics), null-answer-aware ────────── */
+  const weaknessGroups = useMemo(() => {
+    const bySubject: Record<string, Record<string, PrelimsQuestion[]>> = {};
+    activeQuestions.forEach(q => {
+      if (!bySubject[q.subject]) bySubject[q.subject] = {};
+      if (!bySubject[q.subject][q.syllabus_topic]) bySubject[q.subject][q.syllabus_topic] = [];
+      bySubject[q.subject][q.syllabus_topic].push(q);
+    });
+
+    return Object.entries(bySubject).map(([subject, topics]) => {
+      const topicRows = Object.entries(topics).map(([topic, qs]) => {
+        const answerable = qs.every(q => q.correct_answer !== null);
+        let status: "gap" | "ontrack" | "pending" = "pending";
+        if (answerable) {
+          const wrongCount = qs.filter(q => answers[q.question_id] !== q.correct_answer).length;
+          status = wrongCount > 0 ? "gap" : "ontrack";
+        }
+        return { topic, count: qs.length, status };
+      });
+      const gapCount = topicRows.filter(t => t.status === "gap").length;
+      const allPending = topicRows.every(t => t.status === "pending");
+      const totalQuestions = topicRows.reduce((s, t) => s + t.count, 0);
+      return { subject, topicRows, gapCount, allPending, totalQuestions };
+    });
+  }, [activeQuestions, answers]);
+
+  const attemptedCount = activeQuestions.filter(q => answers[q.question_id]).length;
+  const anyVerified = activeQuestions.some(q => q.correct_answer !== null);
+  const correctCount = anyVerified
+    ? activeQuestions.filter(q => q.correct_answer !== null && answers[q.question_id] === q.correct_answer).length
+    : null;
+  const scorablePct = anyVerified && activeQuestions.length > 0
+    ? Math.round((correctCount! / activeQuestions.length) * 100)
+    : null;
+
+  const pctColor = (p: number) => p >= 75 ? "var(--success)" : p >= 50 ? "var(--warning)" : "var(--danger)";
+
+  /* ══════════════════════════ SETUP ══════════════════════════ */
   if (phase === "setup") {
     return (
       <div style={{ minHeight: "100vh", background: "var(--paper)", color: "var(--ink)" }}>
@@ -223,165 +172,192 @@ function MockPrelimsPageInner() {
         <div className="site-wrap" style={{ paddingTop: 64, paddingBottom: 96, maxWidth: 680 }}>
           <span className="eyebrow">Mock Prelims</span>
           <h1 style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "var(--text-3xl)", letterSpacing: "-0.02em", marginBottom: 8 }}>
-            Timed MCQ practice
+            Practice by topic or by paper
           </h1>
-          <p style={{ color: "var(--ink-muted)", fontSize: 15, lineHeight: 1.7, marginBottom: 40, maxWidth: 560 }}>
-            Drill by subject at your own pace, or sit a full timed paper that mirrors real Prelims pacing.
+          <p style={{ color: "var(--ink-muted)", fontSize: 15, lineHeight: 1.7, marginBottom: 40, maxWidth: 520 }}>
+            Knowledge test is untimed and lets you drill specific subjects. Mock test is a full, timed paper.
           </p>
 
           {/* Mode cards */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 32 }}>
+          <div style={{ display: "flex", gap: 12, marginBottom: 32 }}>
             <button
               onClick={() => setMode("knowledge")}
               style={{
-                textAlign: "left", padding: "18px 18px 16px", borderRadius: 10,
-                border: `1.5px solid ${mode === "knowledge" ? "var(--accent)" : "var(--hairline)"}`,
+                flex: 1, textAlign: "left", padding: 18, borderRadius: 10, cursor: "pointer", fontFamily: "inherit",
+                border: mode === "knowledge" ? "2px solid var(--accent)" : "1px solid var(--hairline)",
                 background: mode === "knowledge" ? "var(--accent-bg)" : "var(--surface)",
-                cursor: "pointer", fontFamily: "inherit",
               }}
             >
-              <div style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 16, color: "var(--ink)", marginBottom: 4 }}>Knowledge test</div>
-              <div style={{ fontSize: 13, color: "var(--ink-muted)", lineHeight: 1.5 }}>Untimed subject drill. Pick subjects, count, and source.</div>
+              <div style={{ fontFamily: "var(--font-display)", fontWeight: 500, fontSize: 15, color: mode === "knowledge" ? "var(--accent)" : "var(--ink)", marginBottom: 4 }}>
+                Knowledge test
+              </div>
+              <div style={{ fontSize: 12, color: "var(--ink-muted)" }}>Untimed, pick your subjects</div>
             </button>
             <button
               onClick={() => setMode("mock")}
               style={{
-                textAlign: "left", padding: "18px 18px 16px", borderRadius: 10,
-                border: `1.5px solid ${mode === "mock" ? "var(--accent)" : "var(--hairline)"}`,
+                flex: 1, textAlign: "left", padding: 18, borderRadius: 10, cursor: "pointer", fontFamily: "inherit",
+                border: mode === "mock" ? "2px solid var(--accent)" : "1px solid var(--hairline)",
                 background: mode === "mock" ? "var(--accent-bg)" : "var(--surface)",
-                cursor: "pointer", fontFamily: "inherit",
               }}
             >
-              <div style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 16, color: "var(--ink)", marginBottom: 4 }}>Mock test</div>
-              <div style={{ fontSize: 13, color: "var(--ink-muted)", lineHeight: 1.5 }}>Timed full paper. One shared clock, mirrors real pacing.</div>
+              <div style={{ fontFamily: "var(--font-display)", fontWeight: 500, fontSize: 15, color: mode === "mock" ? "var(--accent)" : "var(--ink)", marginBottom: 4 }}>
+                Mock test
+              </div>
+              <div style={{ fontSize: 12, color: "var(--ink-muted)" }}>Timed, full paper simulation</div>
             </button>
           </div>
 
-          {/* Knowledge test config */}
           {mode === "knowledge" && (
-            <div>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-faint)", marginBottom: 10 }}>
-                Subjects
-              </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 28 }}>
-                {SUBJECT_CHIPS.map(s => {
-                  const isSelected = selectedSubjects.includes(s);
-                  return (
-                    <button
-                      key={s}
-                      onClick={() => toggleSubject(s)}
-                      style={{
-                        padding: "7px 14px", borderRadius: 20,
-                        border: `1.5px solid ${isSelected ? "var(--accent)" : "var(--hairline)"}`,
-                        background: isSelected ? "var(--accent-bg)" : "var(--surface)",
-                        color: isSelected ? "var(--ink)" : "var(--ink-muted)",
-                        fontSize: 13, cursor: "pointer", fontFamily: "inherit",
-                      }}
-                    >
-                      {s}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-faint)", marginBottom: 10 }}>
-                Question count
-              </div>
-              <div style={{ display: "flex", gap: 8, marginBottom: 28 }}>
-                {QUESTION_COUNTS.map(c => (
-                  <button
-                    key={c}
-                    onClick={() => setQuestionCount(c)}
-                    style={{
-                      padding: "7px 16px", borderRadius: 6,
-                      border: `1.5px solid ${questionCount === c ? "var(--accent)" : "var(--hairline)"}`,
-                      background: questionCount === c ? "var(--accent-bg)" : "var(--surface)",
-                      color: questionCount === c ? "var(--ink)" : "var(--ink-muted)",
-                      fontSize: 13, cursor: "pointer", fontFamily: "inherit",
-                    }}
-                  >
-                    {c}
-                  </button>
-                ))}
-              </div>
-
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-faint)", marginBottom: 10 }}>
-                Question source
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 24 }}>
-                {SOURCE_CARDS.map(card => {
-                  const isSelected = sourceCard === card.id;
-                  const Icon = card.icon;
-                  return (
-                    <button
-                      key={card.id}
-                      onClick={() => setSourceCard(card.id)}
-                      style={{
-                        textAlign: "left", padding: "14px 14px 12px", borderRadius: 8,
-                        border: `1.5px solid ${isSelected ? "var(--accent)" : "var(--hairline)"}`,
-                        background: isSelected ? "var(--accent-bg)" : "var(--surface)",
-                        cursor: "pointer", fontFamily: "inherit",
-                      }}
-                    >
-                      <div style={{ color: isSelected ? "var(--accent)" : "var(--ink-faint)", marginBottom: 8 }}>
-                        <Icon size={18} />
-                      </div>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)", marginBottom: 4 }}>{card.label}</div>
-                      <div style={{ fontSize: 11, color: "var(--ink-muted)", lineHeight: 1.45 }}>{card.desc}</div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div style={{ background: "var(--surface)", border: "1px solid var(--hairline)", borderRadius: 6, padding: "16px 20px", marginBottom: 24 }}>
-                <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--ink-muted)" }}>
-                  {selectedSubjects.length === 0
-                    ? "Select at least one subject to see how many questions are available."
-                    : `${knowledgePool.length} question${knowledgePool.length !== 1 ? "s" : ""} available — will use up to ${questionCount}.`}
+            <>
+              {/* Subject chips */}
+              <div style={{ marginBottom: 28 }}>
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-faint)", marginBottom: 10 }}>
+                  Subjects — leave blank for all
                 </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {ALL_SUBJECTS.map(subj => {
+                    const active = selectedSubjects.includes(subj);
+                    return (
+                      <button
+                        key={subj}
+                        onClick={() => toggleSubjectChip(subj)}
+                        style={{
+                          padding: "6px 14px", borderRadius: 20, fontSize: 13, cursor: "pointer", fontFamily: "inherit",
+                          border: active ? "1px solid var(--accent)" : "1px solid var(--hairline)",
+                          background: active ? "var(--accent-bg)" : "transparent",
+                          color: active ? "var(--accent)" : "var(--ink-muted)",
+                        }}
+                      >
+                        {subj}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Question count */}
+              <div style={{ marginBottom: 28 }}>
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-faint)", marginBottom: 10 }}>
+                  Number of questions
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {[10, 25, 50].map(n => (
+                    <button
+                      key={n}
+                      onClick={() => setQuestionCount(n as 10 | 25 | 50)}
+                      style={{
+                        padding: "8px 18px", borderRadius: 6, fontSize: 14, cursor: "pointer", fontFamily: "inherit",
+                        border: questionCount === n ? "1px solid var(--accent)" : "1px solid var(--hairline)",
+                        background: questionCount === n ? "var(--accent-bg)" : "transparent",
+                        color: questionCount === n ? "var(--accent)" : "var(--ink-muted)",
+                      }}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Source cards — visually distinct, no "AI generating" language anywhere */}
+              <div style={{ marginBottom: 32 }}>
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-faint)", marginBottom: 10 }}>
+                  Question source
+                </div>
+
+                <button
+                  onClick={() => setSourceFilter("pyq")}
+                  disabled={ALL_QUESTIONS.filter(q => q.source_type === "pyq").length === 0}
+                  style={{
+                    display: "block", width: "100%", textAlign: "left", padding: 14, borderRadius: 10, marginBottom: 8, fontFamily: "inherit",
+                    border: sourceFilter === "pyq" ? "2px solid var(--ink)" : "1px solid var(--hairline)",
+                    background: "var(--surface)", cursor: "pointer", opacity: ALL_QUESTIONS.filter(q => q.source_type === "pyq").length === 0 ? 0.45 : 1,
+                  }}
+                >
+                  <div style={{ fontWeight: 500, fontSize: 14, marginBottom: 2 }}>Previous year papers</div>
+                  <div style={{ fontSize: 12, color: "var(--ink-muted)" }}>
+                    {ALL_QUESTIONS.filter(q => q.source_type === "pyq").length === 0
+                      ? "Coming soon — none loaded yet"
+                      : "Actual UPSC questions, exact wording"}
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => setSourceFilter("compiled")}
+                  style={{
+                    display: "block", width: "100%", textAlign: "left", padding: 14, borderRadius: 10, marginBottom: 8, fontFamily: "inherit",
+                    border: sourceFilter === "compiled" ? "2px solid var(--accent)" : "1px solid var(--hairline)",
+                    background: sourceFilter === "compiled" ? "var(--accent-bg)" : "var(--surface)", cursor: "pointer",
+                  }}
+                >
+                  <div style={{ fontWeight: 500, fontSize: 14, marginBottom: 2, color: sourceFilter === "compiled" ? "var(--accent)" : "var(--ink)" }}>
+                    Abhyaas compiled
+                  </div>
+                  <div style={{ fontSize: 12, color: "var(--ink-muted)" }}>
+                    PYQs plus questions built and checked against our syllabus knowledge base
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => setSourceFilter("mix")}
+                  style={{
+                    display: "block", width: "100%", textAlign: "left", padding: 14, borderRadius: 10, fontFamily: "inherit",
+                    border: sourceFilter === "mix" ? "2px solid var(--ink)" : "1px solid var(--hairline)",
+                    background: "var(--surface)", cursor: "pointer",
+                  }}
+                >
+                  <div style={{ fontWeight: 500, fontSize: 14, marginBottom: 2 }}>Full mix</div>
+                  <div style={{ fontSize: 12, color: "var(--ink-muted)" }}>Both sources combined, widest coverage</div>
+                </button>
               </div>
 
               <button
                 onClick={startKnowledgeTest}
-                disabled={knowledgePool.length === 0}
-                style={{
-                  padding: "12px 28px", borderRadius: 4,
-                  background: knowledgePool.length > 0 ? "var(--accent)" : "var(--hairline)",
-                  color: "var(--accent-ink)", fontSize: 15, fontWeight: 600, border: "none",
-                  cursor: knowledgePool.length > 0 ? "pointer" : "not-allowed", fontFamily: "inherit",
-                }}
+                style={{ padding: "12px 28px", borderRadius: 4, background: "var(--accent)", color: "var(--accent-ink)", fontSize: 14, fontWeight: 600, border: "none", cursor: "pointer", fontFamily: "inherit" }}
               >
-                Start Knowledge Test →
+                Start knowledge test →
               </button>
-            </div>
+            </>
           )}
 
-          {/* Mock test — set picker, mirrors the set-picker UI in mock-mains/page.tsx */}
           {mode === "mock" && (
-            <div>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-faint)", marginBottom: 4 }}>
-                Choose a paper
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-                {ALL_SETS.map(set => (
+            <>
+              <div style={{ display: "flex", flexDirection: "column", gap: 0, marginBottom: 28 }}>
+                {SETS.map(set => (
                   <button
                     key={set.id}
-                    onClick={() => startMockTest(set)}
-                    style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", padding: "20px 0", border: "none", borderBottom: "1px solid var(--hairline)", background: "none", cursor: "pointer", fontFamily: "inherit", textAlign: "left", gap: 16 }}
+                    onClick={() => setSelectedSetId(set.id)}
+                    style={{
+                      display: "flex", alignItems: "flex-start", justifyContent: "space-between", padding: "18px 4px",
+                      border: "none", borderBottom: "1px solid var(--hairline)", cursor: "pointer", fontFamily: "inherit", textAlign: "left", gap: 16,
+                      background: selectedSetId === set.id ? "var(--accent-bg)" : "none",
+                    }}
                   >
                     <div style={{ flex: 1 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-                        <span style={{ fontFamily: "var(--font-display)", fontWeight: 500, fontSize: 16, color: "var(--ink)" }}>{set.label}</span>
+                      <div style={{ fontFamily: "var(--font-display)", fontWeight: 500, fontSize: 15, color: selectedSetId === set.id ? "var(--accent)" : "var(--ink)", marginBottom: 4 }}>
+                        {set.label}
                       </div>
                       <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ink-muted)" }}>
-                        {set.paper} · {set.questions.length} questions · ~{Math.ceil(set.questions.length * SECONDS_PER_QUESTION / 60)} min
+                        {set.paper} · {set.questions.length} questions · {MOCK_DURATION_MINUTES} min
                       </div>
                     </div>
                     <span style={{ color: "var(--ink-faint)", fontSize: 18, flexShrink: 0, paddingTop: 2 }}>→</span>
                   </button>
                 ))}
               </div>
-            </div>
+              <button
+                onClick={startMockTest}
+                disabled={!selectedSetId}
+                style={{
+                  padding: "12px 28px", borderRadius: 4, fontSize: 14, fontWeight: 600, border: "none", fontFamily: "inherit",
+                  background: selectedSetId ? "var(--accent)" : "var(--hairline)",
+                  color: selectedSetId ? "var(--accent-ink)" : "var(--ink-faint)",
+                  cursor: selectedSetId ? "pointer" : "not-allowed",
+                }}
+              >
+                Start mock test →
+              </button>
+            </>
           )}
         </div>
         <Footer />
@@ -389,230 +365,221 @@ function MockPrelimsPageInner() {
     );
   }
 
-  /* ── Reviewed ────────────────────────────────────────────────────────── */
+  /* ══════════════════════════ ANSWERING ══════════════════════════ */
+  if (phase === "answering" && currentQ) {
+    const selected = answers[currentQ.question_id];
+    return (
+      <div style={{ minHeight: "100vh", background: "var(--paper)", color: "var(--ink)" }}>
+        <div style={{ position: "sticky", top: 52, zIndex: 40, background: "var(--paper)", borderBottom: "1px solid var(--hairline)" }}>
+          <div className="site-wrap" style={{ display: "flex", alignItems: "center", gap: 16, height: 52 }}>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-faint)", whiteSpace: "nowrap" }}>
+              {currentQ.subject} · {currentQ.syllabus_topic}
+            </span>
+            <div style={{ flex: 1 }} />
+            {mode === "mock" ? (
+              <CountdownTimer
+                key={timerKey}
+                seconds={MOCK_DURATION_MINUTES * 60}
+                onExpire={() => setTimerExpired(true)}
+                paused={phase !== "answering"}
+              />
+            ) : (
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--ink-muted)", whiteSpace: "nowrap" }}>
+                <strong style={{ color: "var(--ink)" }}>{currentIdx + 1}</strong> / {activeQuestions.length}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="site-wrap" style={{ paddingTop: 48, paddingBottom: 80, maxWidth: 680 }}>
+          {timerExpired && (
+            <div style={{ border: "1px solid var(--warning)", borderRadius: 6, padding: "10px 16px", marginBottom: 20, fontSize: 13, color: "var(--warning)", background: "var(--warning-bg)" }}>
+              Time&apos;s up — you can keep going, or submit whenever you&apos;re ready.
+            </div>
+          )}
+
+          <p style={{ fontFamily: "var(--font-display)", fontSize: 19, fontWeight: 500, color: "var(--ink)", lineHeight: 1.6, marginBottom: 24, whiteSpace: "pre-line" }}>
+            {currentQ.question_text}
+          </p>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 28 }}>
+            {(["a", "b", "c", "d"] as OptionKey[]).map(key => {
+              const isSelected = selected === key;
+              return (
+                <button
+                  key={key}
+                  onClick={() => selectOption(key)}
+                  style={{
+                    display: "flex", alignItems: "flex-start", gap: 10, textAlign: "left", padding: "12px 14px", borderRadius: 8, cursor: "pointer", fontFamily: "inherit",
+                    border: isSelected ? "2px solid var(--accent)" : "1px solid var(--hairline)",
+                    background: isSelected ? "var(--accent-bg)" : "var(--surface)",
+                  }}
+                >
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: isSelected ? "var(--accent)" : "var(--ink-faint)", textTransform: "uppercase", flexShrink: 0, paddingTop: 1 }}>
+                    {key}
+                  </span>
+                  <span style={{ fontSize: 14, color: "var(--ink)", lineHeight: 1.5 }}>{currentQ.options[key]}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Progress bar */}
+          <div style={{ height: 4, background: "var(--hairline)", borderRadius: 2, marginBottom: 24, overflow: "hidden" }}>
+            <div style={{ height: "100%", width: `${((currentIdx + 1) / activeQuestions.length) * 100}%`, background: "var(--accent)", borderRadius: 2 }} />
+          </div>
+
+          <div style={{ display: "flex", gap: 12 }}>
+            {currentIdx > 0 && (
+              <button
+                onClick={goBack}
+                style={{ padding: "10px 20px", borderRadius: 4, border: "1px solid var(--hairline)", background: "transparent", color: "var(--ink-muted)", fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}
+              >
+                ← Back
+              </button>
+            )}
+            <button
+              onClick={goNext}
+              style={{ padding: "10px 24px", borderRadius: 4, background: "var(--accent)", color: "var(--accent-ink)", fontSize: 14, fontWeight: 600, border: "none", cursor: "pointer", fontFamily: "inherit" }}
+            >
+              {isLast ? "Submit and review →" : "Next question →"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ══════════════════════════ REVIEWED ══════════════════════════ */
   if (phase === "reviewed") {
-    // Answer key honesty guard: if ANY question in this session lacks a verified
-    // correct_answer, we cannot compute a real score — show a pending state
-    // instead of a fabricated percentage.
-    const hasUnverified = questions.some(q => q.correct_answer === null);
-    const scorable = questions.filter(q => q.correct_answer !== null);
-    const correct = scorable.filter(q => answers[q.question_id] === q.correct_answer).length;
-    const pct = scorable.length > 0 ? Math.round((correct / scorable.length) * 100) : 0;
-
-    // Weakness map grouped by subject, drilling into syllabus_topic on expand.
-    // TODO: once a shared weakness store exists (fed by both Mains long-form
-    // evaluation and Prelims MCQ results), write this per-topic correct/attempted
-    // tally there instead of only computing it locally here. The syllabus_topic
-    // values already come straight from the seed data's KB-aligned tagging, so
-    // no taxonomy translation should be needed at that integration point.
-    const bySubject: Record<string, Record<string, { attempted: number; correct: number; scorable: number }>> = {};
-    questions.forEach(q => {
-      bySubject[q.subject] ??= {};
-      bySubject[q.subject][q.syllabus_topic] ??= { attempted: 0, correct: 0, scorable: 0 };
-      const bucket = bySubject[q.subject][q.syllabus_topic];
-      if (answers[q.question_id] !== null) bucket.attempted++;
-      if (q.correct_answer !== null) {
-        bucket.scorable++;
-        if (answers[q.question_id] === q.correct_answer) bucket.correct++;
-      }
-    });
-
-    const subjectRows = Object.entries(bySubject).map(([subject, topics]) => {
-      const topicRows = Object.entries(topics).map(([topic, t]) => ({
-        topic, ...t,
-        pct: t.scorable > 0 ? Math.round((t.correct / t.scorable) * 100) : null,
-      }));
-      const totalQCount = questions.filter(q => q.subject === subject).length;
-      const gapCount = topicRows.filter(t => t.pct !== null && t.pct < 50).length;
-      return { subject, topicRows, gapCount, totalQCount };
-    }).sort((a, b) => b.gapCount - a.gapCount);
-
     return (
       <div style={{ minHeight: "100vh", background: "var(--paper)", color: "var(--ink)" }}>
         <Nav />
         <div className="site-wrap" style={{ paddingTop: 56, paddingBottom: 96, maxWidth: 680 }}>
           <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-muted)", marginBottom: 8 }}>
-            {timedOut ? "Time's up — " : ""}Session complete
+            Session complete
           </div>
 
-          {hasUnverified ? (
-            <div style={{ border: "1px solid var(--warning)", borderRadius: 8, background: "var(--warning-bg)", padding: "20px 24px", marginBottom: 40 }}>
-              <div style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 18, color: "var(--warning)", marginBottom: 6 }}>
-                Answer key pending verification
-              </div>
-              <p style={{ fontSize: 13, color: "var(--ink-muted)", lineHeight: 1.6 }}>
-                {scorable.length === 0
-                  ? "This set's answer key hasn't been verified yet, so we can't show a score. Your responses are saved below for review once it's ready."
-                  : `Only ${scorable.length} of ${questions.length} questions in this set have a verified answer key. Showing a partial score below — the rest are marked pending.`}
-              </p>
-              {scorable.length > 0 && (
-                <div style={{ display: "flex", alignItems: "flex-end", gap: 20, marginTop: 20 }}>
-                  <span style={{ fontFamily: "var(--font-display)", fontSize: 48, fontWeight: 700, lineHeight: 1, color: pctColor(pct) }}>{pct}%</span>
-                  <div style={{ paddingBottom: 6 }}>
-                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 16, color: "var(--ink-muted)" }}>{correct} / {scorable.length}</div>
-                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-faint)" }}>correct (verified only)</div>
-                  </div>
+          {/* Score summary — honest about unverified answer keys */}
+          {anyVerified ? (
+            <div style={{ display: "flex", gap: 40, marginBottom: 40, paddingBottom: 32, borderBottom: "1px solid var(--hairline)", flexWrap: "wrap" }}>
+              <div>
+                <div style={{ fontFamily: "var(--font-display)", fontSize: 42, fontWeight: 700, color: pctColor(scorablePct!), lineHeight: 1 }}>
+                  {scorablePct}%
                 </div>
-              )}
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-faint)", marginTop: 4 }}>Score</div>
+              </div>
+              <div>
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: 18, fontWeight: 500, color: "var(--ink)" }}>
+                  {correctCount}/{activeQuestions.length}
+                </div>
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-faint)", marginTop: 2 }}>Correct</div>
+              </div>
+              <div>
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: 18, fontWeight: 500, color: "var(--ink)" }}>
+                  {attemptedCount}/{activeQuestions.length}
+                </div>
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-faint)", marginTop: 2 }}>Attempted</div>
+              </div>
             </div>
           ) : (
-            <div style={{ display: "flex", alignItems: "flex-end", gap: 20, marginBottom: 40, paddingBottom: 40, borderBottom: "1px solid var(--hairline)" }}>
-              <span style={{ fontFamily: "var(--font-display)", fontSize: 64, fontWeight: 700, lineHeight: 1, color: pctColor(pct) }}>{pct}%</span>
-              <div style={{ paddingBottom: 8 }}>
-                <div style={{ fontFamily: "var(--font-mono)", fontSize: 18, color: "var(--ink-muted)" }}>{correct} / {scorable.length}</div>
-                <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-faint)" }}>correct</div>
+            <div style={{ marginBottom: 40, paddingBottom: 32, borderBottom: "1px solid var(--hairline)" }}>
+              <div style={{ border: "1px solid var(--warning)", borderRadius: 8, padding: "14px 16px", background: "var(--warning-bg)", marginBottom: 16 }}>
+                <div style={{ fontSize: 13, fontWeight: 500, color: "var(--warning)", marginBottom: 2 }}>Answer key pending verification</div>
+                <div style={{ fontSize: 12, color: "var(--ink-muted)" }}>Scoring and weakness detection will activate once this set&apos;s answer key is checked.</div>
               </div>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: 18, fontWeight: 500, color: "var(--ink)" }}>
+                {attemptedCount}/{activeQuestions.length}
+              </div>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-faint)", marginTop: 2 }}>Attempted</div>
             </div>
           )}
 
-          {/* Weakness map — subject rows collapsed by default, expand to topic breakdown */}
-          {subjectRows.length > 0 && (
-            <div style={{ marginBottom: 40 }}>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-faint)", marginBottom: 14 }}>
-                Weakness map — by subject
-              </div>
-              {subjectRows.map(row => {
-                const isOpen = !!expandedSubjects[row.subject];
-                const hasScorableTopics = row.topicRows.some(t => t.pct !== null);
-                return (
-                  <div key={row.subject} style={{ borderBottom: "1px solid var(--hairline)" }}>
-                    <button
-                      onClick={() => setExpandedSubjects(prev => ({ ...prev, [row.subject]: !prev[row.subject] }))}
-                      style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "12px 0", border: "none", background: "none", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <IconChevron rotated={isOpen} />
-                        <span style={{ fontSize: 14, color: "var(--ink)", fontWeight: 500 }}>{row.subject}</span>
-                      </div>
-                      {hasScorableTopics ? (
-                        <span style={{
-                          fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20,
-                          color: row.gapCount > 0 ? "var(--danger)" : "var(--success)",
-                          background: row.gapCount > 0 ? "var(--danger-bg)" : "var(--success-bg)",
-                          whiteSpace: "nowrap",
-                        }}>
-                          {row.gapCount > 0 ? `${row.gapCount} gap${row.gapCount !== 1 ? "s" : ""}` : "On track"} · {row.totalQCount}q
-                        </span>
-                      ) : (
-                        <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ink-faint)", whiteSpace: "nowrap" }}>
-                          Pending · {row.totalQCount}q
-                        </span>
-                      )}
-                    </button>
-                    {isOpen && (
-                      <div style={{ paddingLeft: 22, paddingBottom: 12 }}>
-                        {row.topicRows.map(t => {
-                          const isGap = t.pct !== null && t.pct < 50;
-                          const isPending = t.pct === null;
-                          return (
-                            <div key={t.topic} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "8px 0" }}>
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: 13, color: "var(--ink)", marginBottom: 2 }}>{t.topic}</div>
-                                <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ink-faint)" }}>
-                                  {isPending ? "pending answer key" : `${t.correct}/${t.scorable} correct`}
-                                </div>
-                              </div>
-                              {!isPending && (
-                                <span style={{
-                                  fontFamily: "var(--font-mono)", fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 20,
-                                  color: isGap ? "var(--danger)" : "var(--success)",
-                                  background: isGap ? "var(--danger-bg)" : "var(--success-bg)",
-                                  whiteSpace: "nowrap",
-                                }}>
-                                  {isGap ? "Content gap" : "On track"}
-                                </span>
-                              )}
-                              {isGap && (
-                                <button
-                                  // Stub only — no revision content built yet.
-                                  onClick={() => {}}
-                                  style={{ padding: "6px 12px", borderRadius: 4, border: "1px solid var(--hairline)", background: "transparent", color: "var(--ink-muted)", fontSize: 12, cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}
-                                >
-                                  Revise topic
-                                </button>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          {/* Weakness map — grouped by subject, collapsed by default */}
+          <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 18, marginBottom: 4, color: "var(--ink)" }}>Weakness map</h2>
+          <p style={{ fontSize: 12, color: "var(--ink-muted)", marginBottom: 16 }}>Grouped by subject — tap to see topics</p>
 
-          <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 18, marginBottom: 16, color: "var(--ink)" }}>Full review</h2>
-          {questions.map((q, i) => {
-            const chosen = answers[q.question_id];
-            const isPending = q.correct_answer === null;
-            const isCorrect = !isPending && chosen === q.correct_answer;
-            const isSkipped = chosen === null;
-            const isExpanded = !!expandedExplanations[q.question_id];
-            const borderColor = isPending ? "var(--hairline)" : isSkipped ? "var(--hairline)" : isCorrect ? "var(--success)" : "var(--danger)";
-            return (
-              <div
-                key={q.question_id}
-                style={{ paddingLeft: 14, paddingBottom: 20, marginBottom: 20, borderLeft: `3px solid ${borderColor}`, borderBottom: "1px solid var(--hairline)" }}
-              >
-                <div style={{ display: "flex", gap: 10, marginBottom: 10, alignItems: "center" }}>
-                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ink-faint)" }}>Q{i + 1}</span>
-                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-faint)" }}>{q.syllabus_topic}</span>
-                  {isPending && (
-                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--warning)", border: "1px solid var(--warning)", borderRadius: 2, padding: "1px 6px" }}>
-                      Pending
+          <div style={{ marginBottom: 40 }}>
+            {weaknessGroups.map(({ subject, topicRows, gapCount, allPending, totalQuestions }) => {
+              const isOpen = expandedSubject === subject;
+              const badgeColor = allPending ? "var(--ink-muted)" : gapCount > 0 ? "var(--danger)" : "var(--success)";
+              const badgeText = allPending
+                ? `Pending · ${totalQuestions} questions`
+                : gapCount > 0
+                  ? `${gapCount} gap${gapCount > 1 ? "s" : ""} · ${totalQuestions} questions`
+                  : `On track · ${totalQuestions} questions`;
+              return (
+                <div key={subject} style={{ borderBottom: "1px solid var(--hairline)" }}>
+                  <button
+                    onClick={() => setExpandedSubject(isOpen ? null : subject)}
+                    style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", padding: "12px 0", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}
+                  >
+                    <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ display: "inline-block", transform: isOpen ? "rotate(90deg)" : "rotate(0deg)", transition: "transform .15s", color: "var(--ink-faint)", fontSize: 12 }}>▶</span>
+                      <span style={{ fontSize: 14, fontWeight: 500, color: "var(--ink)" }}>{subject}</span>
                     </span>
+                    <span style={{ fontSize: 12, color: badgeColor, whiteSpace: "nowrap" }}>{badgeText}</span>
+                  </button>
+                  {isOpen && (
+                    <div style={{ padding: "0 0 12px 22px" }}>
+                      {topicRows.map(({ topic, status, count }) => (
+                        <div key={topic} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0" }}>
+                          <span style={{ fontSize: 13, color: "var(--ink)" }}>{topic}</span>
+                          <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <span style={{ fontSize: 12, color: status === "gap" ? "var(--danger)" : status === "ontrack" ? "var(--success)" : "var(--ink-faint)" }}>
+                              {status === "gap" ? "Content gap" : status === "ontrack" ? "On track" : `Pending · ${count}`}
+                            </span>
+                            {status === "gap" && (
+                              <button
+                                disabled
+                                title="Coming soon"
+                                style={{ fontSize: 11, padding: "3px 10px", borderRadius: 4, border: "1px solid var(--hairline)", background: "var(--surface)", color: "var(--ink-faint)", cursor: "not-allowed", fontFamily: "inherit" }}
+                              >
+                                Revise topic
+                              </button>
+                            )}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
-                <p style={{ fontSize: 14, color: "var(--ink)", lineHeight: 1.65, marginBottom: 12, whiteSpace: "pre-line" }}>{q.question_text}</p>
+              );
+            })}
+          </div>
 
-                <div style={{ display: "flex", gap: 24, marginBottom: 10, flexWrap: "wrap" }}>
+          {/* Question review list */}
+          <h2 style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 18, marginBottom: 16, color: "var(--ink)" }}>Question review</h2>
+          {activeQuestions.map((q, i) => {
+            const yourAnswer = answers[q.question_id];
+            const isCorrect = q.correct_answer !== null && yourAnswer === q.correct_answer;
+            const borderColor = q.correct_answer === null ? "var(--hairline)" : isCorrect ? "var(--success)" : "var(--danger)";
+            return (
+              <details key={q.question_id} style={{ borderLeft: `3px solid ${borderColor}`, padding: "10px 0 10px 14px", marginBottom: 8 }}>
+                <summary style={{ cursor: "pointer", fontSize: 13, color: "var(--ink)", lineHeight: 1.5 }}>
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ink-faint)", marginRight: 8 }}>Q{i + 1}</span>
+                  {q.question_text.slice(0, 90)}{q.question_text.length > 90 ? "…" : ""}
+                </summary>
+                <div style={{ marginTop: 10, fontSize: 13, color: "var(--ink-muted)" }}>
+                  <div style={{ marginBottom: 6 }}>Your answer: <strong style={{ color: "var(--ink)" }}>{yourAnswer ? `${yourAnswer.toUpperCase()} — ${q.options[yourAnswer]}` : "Not attempted"}</strong></div>
                   <div>
-                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-faint)", marginBottom: 2 }}>Your answer</div>
-                    <div style={{ fontSize: 13, color: isSkipped ? "var(--ink-faint)" : isPending ? "var(--ink-muted)" : isCorrect ? "var(--success)" : "var(--danger)" }}>
-                      {isSkipped ? "Not answered" : `${chosen!.toUpperCase()}. ${q.options[chosen!]}`}
-                    </div>
+                    Correct answer:{" "}
+                    <strong style={{ color: "var(--ink)" }}>
+                      {q.correct_answer ? `${q.correct_answer.toUpperCase()} — ${q.options[q.correct_answer]}` : "Pending verification"}
+                    </strong>
                   </div>
-                  {isPending ? (
-                    <div>
-                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-faint)", marginBottom: 2 }}>Correct answer</div>
-                      <div style={{ fontSize: 13, color: "var(--warning)" }}>Pending verification</div>
-                    </div>
-                  ) : !isCorrect && (
-                    <div>
-                      <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-faint)", marginBottom: 2 }}>Correct answer</div>
-                      <div style={{ fontSize: 13, color: "var(--success)" }}>{q.correct_answer!.toUpperCase()}. {q.options[q.correct_answer!]}</div>
-                    </div>
-                  )}
+                  {q.explanation && <div style={{ marginTop: 8 }}>{q.explanation}</div>}
                 </div>
-
-                {q.explanation ? (
-                  <>
-                    <button
-                      onClick={() => setExpandedExplanations(prev => ({ ...prev, [q.question_id]: !prev[q.question_id] }))}
-                      style={{ background: "none", border: "none", padding: 0, fontSize: 12, color: "var(--accent)", cursor: "pointer", fontFamily: "inherit" }}
-                    >
-                      {isExpanded ? "Hide explanation ▲" : "Show explanation ▼"}
-                    </button>
-                    {isExpanded && (
-                      <div style={{ background: "var(--surface)", border: "1px solid var(--hairline)", borderRadius: 4, padding: "10px 14px", marginTop: 10 }}>
-                        <p style={{ fontSize: 13, color: "var(--ink-muted)", lineHeight: 1.65 }}>{q.explanation}</p>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <p style={{ fontSize: 12, color: "var(--ink-faint)", fontStyle: "italic" }}>Explanation not yet available.</p>
-                )}
-              </div>
+              </details>
             );
           })}
 
-          <div style={{ display: "flex", gap: 12, marginTop: 36 }}>
-            <button onClick={retrySameQuestions} style={{ padding: "10px 20px", borderRadius: 4, background: "var(--accent)", color: "var(--accent-ink)", fontSize: 14, fontWeight: 600, border: "none", cursor: "pointer", fontFamily: "inherit" }}>
-              Try again
-            </button>
-            <button onClick={() => setPhase("setup")} style={{ padding: "10px 20px", borderRadius: 4, border: "1px solid var(--hairline)", background: "transparent", color: "var(--ink-muted)", fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>
-              Change setup
+          <div style={{ display: "flex", gap: 12, marginTop: 32 }}>
+            <button
+              onClick={() => setPhase("setup")}
+              style={{ padding: "10px 20px", borderRadius: 4, background: "var(--accent)", color: "var(--accent-ink)", fontSize: 14, fontWeight: 600, border: "none", cursor: "pointer", fontFamily: "inherit" }}
+            >
+              New session
             </button>
           </div>
         </div>
@@ -621,97 +588,5 @@ function MockPrelimsPageInner() {
     );
   }
 
-  /* ── Answering ───────────────────────────────────────────────────────── */
-  // Minimal chrome — no global Nav/Footer, matching the distraction-free intent
-  // of mock-mains' answering phase (same route hides them the same way there).
-  if (questions.length === 0) return null;
-  const q = questions[currentIdx];
-  const chosen = answers[q.question_id];
-  const isLast = currentIdx === questions.length - 1;
-  const answered = Object.values(answers).filter(v => v !== null).length;
-  const optionKeys: OptionKey[] = ["a", "b", "c", "d"];
-
-  return (
-    <div style={{ minHeight: "100vh", background: "var(--paper)", color: "var(--ink)" }}>
-      <div style={{ position: "sticky", top: 0, zIndex: 40, background: "var(--paper)", borderBottom: "1px solid var(--hairline)" }}>
-        <div className="site-wrap" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, height: 52 }}>
-          <span style={{
-            fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ink-muted)",
-            border: "1px solid var(--hairline)", borderRadius: 20, padding: "4px 12px",
-            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-          }}>
-            {q.subject} · {q.syllabus_topic}
-          </span>
-          {mode === "mock" ? (
-            <CountdownTimer key={timerKey} seconds={totalSeconds} onExpire={handleExpire} />
-          ) : (
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--ink-muted)", whiteSpace: "nowrap" }}>
-              <strong style={{ color: "var(--ink)" }}>{currentIdx + 1}</strong> / {questions.length}
-            </span>
-          )}
-        </div>
-      </div>
-
-      <div className="site-wrap" style={{ paddingTop: 40, paddingBottom: 80, maxWidth: 640 }}>
-        <div style={{ background: "var(--surface)", border: "1px solid var(--hairline)", borderRadius: 10, padding: "24px 24px 8px", marginBottom: 24 }}>
-          <p style={{ fontFamily: "var(--font-sans)", fontSize: 16, color: "var(--ink)", lineHeight: 1.7, marginBottom: 24, whiteSpace: "pre-line" }}>
-            {q.question_text}
-          </p>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
-            {optionKeys.map(key => {
-              const isSelected = chosen === key;
-              return (
-                <button
-                  key={key}
-                  onClick={() => selectOption(q.question_id, key)}
-                  style={{
-                    padding: "12px 16px",
-                    border: `1.5px solid ${isSelected ? "var(--accent)" : "var(--hairline)"}`,
-                    borderRadius: 6,
-                    background: isSelected ? "var(--accent-bg)" : "var(--surface)",
-                    color: isSelected ? "var(--ink)" : "var(--ink-muted)",
-                    fontSize: 14,
-                    fontFamily: "inherit",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    display: "flex",
-                    gap: 12,
-                    alignItems: "flex-start",
-                  }}
-                >
-                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: isSelected ? "var(--accent)" : "var(--ink-faint)", flexShrink: 0, marginTop: 2 }}>
-                    {key.toUpperCase()}.
-                  </span>
-                  <span style={{ lineHeight: 1.55 }}>{q.options[key]}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Thin progress bar at bottom */}
-        <div style={{ height: 3, background: "var(--hairline)", borderRadius: 2, marginBottom: 20 }}>
-          <div style={{ height: "100%", width: `${(currentIdx / questions.length) * 100}%`, background: "var(--accent)", borderRadius: 2, transition: "width 0.2s" }} />
-        </div>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          {currentIdx > 0 && (
-            <button onClick={() => setCurrentIdx(i => i - 1)} style={{ padding: "9px 18px", borderRadius: 4, border: "1px solid var(--hairline)", background: "transparent", color: "var(--ink-muted)", fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>
-              ← Previous
-            </button>
-          )}
-          {isLast ? (
-            <button onClick={submit} style={{ padding: "9px 20px", borderRadius: 4, background: "var(--accent)", color: "var(--accent-ink)", fontSize: 14, fontWeight: 600, border: "none", cursor: "pointer", fontFamily: "inherit" }}>
-              Submit Test ({answered}/{questions.length} answered)
-            </button>
-          ) : (
-            <button onClick={() => setCurrentIdx(i => i + 1)} style={{ padding: "9px 20px", borderRadius: 4, background: "var(--accent)", color: "var(--accent-ink)", fontSize: 14, fontWeight: 600, border: "none", cursor: "pointer", fontFamily: "inherit" }}>
-              Next →
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+  return null;
 }
